@@ -1,4 +1,5 @@
 import type { Config } from "tailwindcss";
+import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
   darkMode: ["class"],
@@ -7,15 +8,22 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: "2rem",
+      padding: {
+        DEFAULT: "1rem",
+        sm: "1.5rem",
+        lg: "2rem",
+        xl: "3rem",
+        "2xl": "4rem",
+      },
       screens: {
-        "2xl": "1400px",
+        "2xl": "1600px",
       },
     },
     extend: {
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
         heading: ["Plus Jakarta Sans", "system-ui", "sans-serif"],
+        mono: ["JetBrains Mono", "Fira Code", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -73,6 +81,32 @@ export default {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
         },
+        error: {
+          DEFAULT: "hsl(var(--error))",
+          foreground: "hsl(var(--error-foreground))",
+        },
+        // Construction Status Colors
+        status: {
+          pending: "hsl(var(--status-pending))",
+          progress: "hsl(var(--status-progress))",
+          completed: "hsl(var(--status-completed))",
+          disputed: "hsl(var(--status-disputed))",
+          assigned: "hsl(var(--status-assigned))",
+        },
+        // Payment Status Colors
+        payment: {
+          pending: "hsl(var(--payment-pending))",
+          confirmed: "hsl(var(--payment-confirmed))",
+          rejected: "hsl(var(--payment-rejected))",
+          processing: "hsl(var(--payment-processing))",
+        },
+        // Architectural Surfaces
+        surface: {
+          primary: "hsl(var(--surface-primary))",
+          secondary: "hsl(var(--surface-secondary))",
+          elevated: "hsl(var(--surface-elevated))",
+          overlay: "hsla(var(--surface-overlay))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -82,6 +116,22 @@ export default {
       boxShadow: {
         card: "var(--shadow-card)",
         elevated: "var(--shadow-elevated)",
+        construction: "var(--shadow-construction)",
+        'soft': '0 3px 12px hsla(var(--foreground) / 0.08)',
+        'medium': '0 6px 24px hsla(var(--foreground) / 0.12)',
+        'strong': '0 12px 48px hsla(var(--foreground) / 0.16)',
+      },
+      backgroundImage: {
+        'gradient-hero': 'var(--gradient-hero)',
+        'gradient-accent': 'var(--gradient-accent)',
+        'gradient-warm': 'var(--gradient-warm)',
+        'gradient-construction': 'var(--gradient-construction)',
+        'construction-pattern': 'linear-gradient(45deg, transparent 25%, hsla(var(--muted) / 0.3) 25%, hsla(var(--muted) / 0.3) 50%, transparent 50%, transparent 75%, hsla(var(--muted) / 0.3) 75%)',
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
       },
       keyframes: {
         "accordion-down": {
@@ -114,5 +164,5 @@ export default {
       },
     },
   },
-  plugins: [require("tailwindcss-animate")],
+  plugins: [tailwindcssAnimate],
 } satisfies Config;

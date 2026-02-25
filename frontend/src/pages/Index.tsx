@@ -41,7 +41,7 @@ const Index = () => {
               <Button size="lg" className="bg-secondary text-secondary-foreground hover:bg-secondary/90 h-12 px-6 text-base" onClick={() => navigate('/browse-contractors')}>
                 Find a Contractor <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="h-12 px-6 text-base border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10" onClick={() => navigate('/register')}>
+              <Button size="lg" className="h-12 px-6 text-base bg-white text-gray-900 hover:bg-gray-100 border border-white/20" onClick={() => navigate('/register')}>
                 Join as Contractor
               </Button>
             </div>
@@ -70,7 +70,7 @@ const Index = () => {
       <section className="py-16 lg:py-24">
         <div className="container">
           <div className="text-center">
-            <h2 className="font-heading text-3xl font-bold text-foreground">How BuildPro Works</h2>
+            <h2 className="font-heading text-3xl font-bold text-foreground">How NEXA-INFRA Works</h2>
             <p className="mt-2 text-muted-foreground">Three simple steps to your dream project</p>
           </div>
           <div className="mt-12 grid gap-8 md:grid-cols-3">

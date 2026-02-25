@@ -1,11 +1,13 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Navbar } from "./Navbar";
 import { useAuth } from "@/contexts/AuthContext";
+import { useState } from "react";
 import {
   LayoutDashboard, Users, FolderKanban, DollarSign, Shield, Star,
-  BarChart3, Settings, UserCircle, MessageSquare, Bell, FileText, AlertTriangle
+  BarChart3, Settings, UserCircle, MessageSquare, Bell, FileText, AlertTriangle, Menu, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 const ADMIN_LINKS = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -36,35 +38,76 @@ const USER_LINKS = [
 
 export const DashboardLayout = () => {
   const { role } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const links = role === 'SUPER_ADMIN' ? ADMIN_LINKS : role === 'CONTRACTOR' ? CONTRACTOR_LINKS : USER_LINKS;
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <div className="flex">
+        {/* Mobile Sidebar Overlay */}
+        {sidebarOpen && (
+          <div 
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setSidebarOpen(false)}
+          />
+        )}
+
         {/* Sidebar */}
-        <aside className="hidden w-60 shrink-0 border-r border-border bg-card lg:block">
-          <nav className="sticky top-16 flex flex-col gap-1 p-3">
+        <aside className={cn(
+          "fixed left-0 top-16 z-50 h-[calc(100vh-4rem)] border-r border-border bg-card transition-all duration-300",
+          sidebarExpanded ? "w-60" : "w-16",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        )}>
+          <nav className="flex h-full flex-col gap-1 p-3">
             {links.map(link => (
               <NavLink
                 key={link.to}
                 to={link.to}
+                onClick={() => setSidebarOpen(false)}
                 className={({ isActive }) => cn(
                   "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive
                     ? "bg-secondary/10 text-secondary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  !sidebarExpanded && "justify-center"
                 )}
               >
-                <link.icon className="h-4 w-4" />
-                {link.label}
+                <link.icon className="h-5 w-5 shrink-0" />
+                {sidebarExpanded && <span>{link.label}</span>}
               </NavLink>
             ))}
+            
+            {/* Toggle Button at Bottom */}
+            <div className="mt-auto">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSidebarExpanded(!sidebarExpanded)}
+                className="hidden w-full justify-center lg:flex"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            </div>
           </nav>
         </aside>
 
+        {/* Mobile Menu Button */}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="fixed bottom-4 left-4 z-50 h-12 w-12 rounded-full shadow-lg lg:hidden"
+        >
+          {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+        </Button>
+
         {/* Main content */}
-        <main className="flex-1 p-4 lg:p-6">
+        <main className={cn(
+          "flex-1 p-4 transition-all duration-300 lg:p-6",
+          sidebarExpanded ? "lg:ml-60" : "lg:ml-16"
+        )}>
           <Outlet />
         </main>
       </div>

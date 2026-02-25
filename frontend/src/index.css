@@ -6,57 +6,86 @@
 
 @layer base {
   :root {
-    --background: 210 20% 98%;
-    --foreground: 215 30% 12%;
+    /* Architectural Theme - Light Mode */
+    --background: 45 25% 97%;              /* Warm off-white */
+    --foreground: 25 20% 15%;              /* Dark charcoal */
 
-    --card: 0 0% 100%;
-    --card-foreground: 215 30% 12%;
+    --card: 42 35% 95%;                    /* Cream card background */
+    --card-foreground: 25 20% 15%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 215 30% 12%;
+    --popover: 42 35% 95%;
+    --popover-foreground: 25 20% 15%;
 
-    --primary: 215 60% 18%;
-    --primary-foreground: 40 20% 97%;
+    --primary: 35 45% 35%;                 /* Warm brown primary */
+    --primary-foreground: 42 35% 95%;
 
-    --secondary: 24 85% 52%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 42 65% 75%;               /* Light beige */
+    --secondary-foreground: 25 20% 15%;
 
-    --muted: 210 15% 93%;
-    --muted-foreground: 215 12% 48%;
+    --muted: 45 20% 90%;                   /* Subtle warm background */
+    --muted-foreground: 35 15% 45%;
 
-    --accent: 24 85% 52%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 38 85% 55%;                  /* Golden accent from foliage */
+    --accent-foreground: 25 20% 15%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 214 20% 88%;
-    --input: 214 20% 88%;
-    --ring: 24 85% 52%;
+    --border: 42 25% 85%;                  /* Warm border */
+    --input: 42 25% 90%;
+    --ring: 38 85% 55%;
 
-    --radius: 0.625rem;
+    --radius: 0.75rem;                     /* Architectural rounded corners */
 
-    --sidebar-background: 215 60% 14%;
-    --sidebar-foreground: 210 20% 90%;
-    --sidebar-primary: 24 85% 52%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 215 50% 22%;
-    --sidebar-accent-foreground: 210 20% 90%;
-    --sidebar-border: 215 40% 24%;
-    --sidebar-ring: 24 85% 52%;
+    /* Sidebar - Architectural Theme */
+    --sidebar-background: 35 35% 25%;      /* Deep warm brown */
+    --sidebar-foreground: 42 35% 92%;
+    --sidebar-primary: 38 85% 55%;         /* Golden accent */
+    --sidebar-primary-foreground: 25 20% 15%;
+    --sidebar-accent: 35 25% 35%;
+    --sidebar-accent-foreground: 42 35% 90%;
+    --sidebar-border: 35 20% 45%;
+    --sidebar-ring: 38 85% 55%;
 
-    /* Custom tokens */
-    --success: 152 60% 40%;
+    /* Status Colors */
+    --success: 142 76% 36%;                /* Natural green */
     --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 38 92% 12%;
-    --info: 205 80% 50%;
+    --warning: 38 92% 50%;                 /* Amber warning */
+    --warning-foreground: 25 20% 15%;
+    --info: 205 85% 45%;
     --info-foreground: 0 0% 100%;
+    --error: 0 72% 51%;
+    --error-foreground: 0 0% 100%;
 
-    --gradient-hero: linear-gradient(135deg, hsl(215 60% 14%) 0%, hsl(215 45% 24%) 50%, hsl(24 60% 30%) 100%);
-    --gradient-accent: linear-gradient(135deg, hsl(24 85% 52%), hsl(24 90% 42%));
-    --shadow-card: 0 1px 3px 0 hsl(215 30% 12% / 0.06), 0 1px 2px -1px hsl(215 30% 12% / 0.06);
-    --shadow-elevated: 0 10px 25px -5px hsl(215 30% 12% / 0.1), 0 8px 10px -6px hsl(215 30% 12% / 0.08);
+    /* Construction/Project Status Colors */
+    --status-pending: 38 60% 70%;          /* Warm amber */
+    --status-progress: 205 70% 60%;        /* Professional blue */
+    --status-completed: 142 76% 36%;       /* Success green */
+    --status-disputed: 0 72% 51%;          /* Alert red */
+    --status-assigned: 38 85% 55%;         /* Golden */
+
+    /* Payment Status Colors */
+    --payment-pending: 38 60% 70%;
+    --payment-confirmed: 142 76% 36%;
+    --payment-rejected: 0 72% 51%;
+    --payment-processing: 205 70% 60%;
+
+    /* Architectural Gradients */
+    --gradient-hero: linear-gradient(135deg, hsl(35 35% 25%) 0%, hsl(35 25% 35%) 30%, hsl(38 45% 45%) 70%, hsl(42 55% 65%) 100%);
+    --gradient-accent: linear-gradient(135deg, hsl(38 85% 55%) 0%, hsl(38 90% 45%) 100%);
+    --gradient-warm: linear-gradient(135deg, hsl(42 65% 75%) 0%, hsl(38 70% 65%) 100%);
+    --gradient-construction: linear-gradient(135deg, hsl(35 45% 35%) 0%, hsl(25 35% 45%) 100%);
+
+    /* Professional Shadows */
+    --shadow-card: 0 2px 8px hsl(25 20% 15% / 0.08), 0 1px 3px hsl(25 20% 15% / 0.06);
+    --shadow-elevated: 0 12px 32px -8px hsl(25 20% 15% / 0.12), 0 8px 16px -8px hsl(25 20% 15% / 0.08);
+    --shadow-construction: 0 8px 24px -6px hsl(35 35% 25% / 0.15);
+
+    /* Architectural Surfaces */
+    --surface-primary: 42 35% 95%;
+    --surface-secondary: 45 20% 90%;
+    --surface-elevated: 42 45% 92%;
+    --surface-overlay: 25 20% 15% / 0.6;
   }
 
   .dark {
