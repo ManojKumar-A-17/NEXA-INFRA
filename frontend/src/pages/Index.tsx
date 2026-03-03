@@ -1,200 +1,394 @@
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useEffect, useRef } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ContractorCard } from "@/components/ContractorCard";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { MOCK_CONTRACTORS } from "@/data/mock";
-import { useAuth } from "@/contexts/AuthContext";
-import { ArrowRight, Shield, Clock, Star, Users, CheckCircle, HardHat, TrendingUp, Award, Zap } from "lucide-react";
+import {
+  ArrowRight, Shield, Star, Users, CheckCircle,
+  HardHat, Zap, TrendingUp, Lock, MessageSquare, Award,
+  Building2, ChevronRight, MapPin, Clock, Handshake,
+} from "lucide-react";
 import heroImage from "@/assets/hero-construction.jpg";
 
-const Index = () => {
-  const { loginAs } = useAuth();
-  const navigate = useNavigate();
-  const hasScrolled = useRef(false);
+// ── Data ─────────────────────────────────────────────────────────────────────
 
-  const topContractors = MOCK_CONTRACTORS.filter(c => c.status === 'ACTIVE').slice(0, 3);
+const STATS = [
+  { value: "2,500+", label: "Verified Contractors" },
+  { value: "15K+",   label: "Projects Completed"   },
+  { value: "4.8",    label: "Avg. Star Rating"      },
+  { value: "$50M+",  label: "Projects Managed"      },
+];
 
+const FEATURES = [
+  { icon: Shield,        title: "Verified Professionals", desc: "Every contractor is background-checked, licensed, and insured before joining the platform." },
+  { icon: TrendingUp,    title: "Real-Time Tracking",      desc: "Monitor every milestone, document upload, and status change as it happens." },
+  { icon: Lock,          title: "Secure Escrow Payments",  desc: "Funds are held safely and only released when you approve the completed work." },
+  { icon: MessageSquare, title: "Direct Communication",    desc: "Chat directly with your contractor, share files, and resolve issues fast." },
+  { icon: Award,         title: "Rating & Reviews",        desc: "Transparent, verified reviews help you choose the best contractor every time." },
+  { icon: Zap,           title: "Fast Matching",           desc: "Get matched with qualified contractors in your area within minutes." },
+];
+
+const STEPS = [
+  { icon: Users,       title: "Browse & Select", desc: "Explore verified contractors, compare ratings and portfolios, and find the perfect match for your project." },
+  { icon: Building2,   title: "Post & Track",    desc: "Submit your project details, agree on milestones, and monitor every step in real-time." },
+  { icon: CheckCircle, title: "Approve & Pay",   desc: "Confirm the finished work, release payment from escrow, and leave a verified review." },
+];
+
+const TESTIMONIALS = [
+  { name: "Sarah M.",  role: "Homeowner",            rating: 5, quote: "NEXA INFRA made my renovation stress-free. The contractor was professional and the tracking feature kept me updated daily." },
+  { name: "James K.",  role: "Property Developer",   rating: 5, quote: "Managing multiple projects has never been easier. The escrow system gives me full confidence in every transaction." },
+  { name: "Linda O.",  role: "Small Business Owner", rating: 5, quote: "Found an excellent contractor within a day. The reviews are genuine and the whole process is transparent." },
+];
+
+const ABOUT_PILLARS = [
+  { icon: MapPin,    title: "Built for You",       desc: "Designed around real construction needs — fair pricing, trusted professionals, and real accountability." },
+  { icon: Handshake, title: "Fair for Both Sides", desc: "Homeowners get protection. Contractors get fair pay. Built to create lasting professional relationships." },
+  { icon: Clock,     title: "Saving You Time",     desc: "From browsing to project completion — everything in one platform so you never chase emails or calls again." },
+];
+
+// ── Scroll-reveal hook ────────────────────────────────────────────────────────
+
+function useScrollReveal() {
   useEffect(() => {
-    const revealOnScroll = () => {
-      hasScrolled.current = true;
-      const els = document.querySelectorAll<HTMLElement>('.sr:not(.sr-done)');
-      els.forEach(el => {
-        const rect = el.getBoundingClientRect();
-        if (rect.top < window.innerHeight - 60) {
-          el.classList.add('sr-done');
-        }
-      });
-    };
-    window.addEventListener('scroll', revealOnScroll, { passive: true });
-    return () => window.removeEventListener('scroll', revealOnScroll);
+    const els = document.querySelectorAll<HTMLElement>(".scroll-reveal");
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target as HTMLElement;
+            const delay = parseInt(el.dataset.delay ?? "0");
+            setTimeout(() => el.classList.add("visible"), delay);
+            observer.unobserve(el);
+          }
+        });
+      },
+      { threshold: 0.08 }
+    );
+    els.forEach(el => observer.observe(el));
+    return () => observer.disconnect();
   }, []);
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+
+const Index = () => {
+  const navigate = useNavigate();
+  useScrollReveal();
+
+  const topContractors = MOCK_CONTRACTORS.filter(c => c.status === "APPROVED").slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      <Navbar forcePublic={true} />
+      <Navbar />
 
-      {/* ── Hero ── */}
-      <section className="relative min-h-[92vh] flex items-center overflow-hidden">
+      {/* ── Hero ──────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0">
-          <img src={heroImage} alt="" className="h-full w-full object-cover scale-105" />
+          <img src={heroImage} alt="Construction site" className="h-full w-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-r from-primary/97 via-primary/85 to-primary/30" />
-          <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
         </div>
-        <div className="container relative z-10 py-32">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-secondary/30 bg-secondary/10 backdrop-blur-sm px-4 py-1.5 text-sm font-medium text-secondary hero-animate">
-              <HardHat className="h-4 w-4" />
-              Trusted by 10,000+ homeowners across India
+
+        <div className="container relative py-28 lg:py-44">
+          <div className="max-w-2xl space-y-6">
+            <div className="hero-animate" style={{ animationDelay: "0.1s" }}>
+              <div className="flex items-center gap-2 w-fit rounded-full bg-white/10 border border-white/20 px-4 py-1.5 text-sm font-medium text-primary-foreground/90 backdrop-blur-sm">
+                <HardHat className="h-4 w-4 text-secondary" />
+                Trusted by 10,000+ homeowners worldwide
+              </div>
             </div>
-            <h1 className="mt-6 font-heading text-5xl font-extrabold leading-[1.1] text-white lg:text-7xl hero-animate" style={{ animationDelay: '0.25s' }}>
-              Build with<br />
-              <span className="text-secondary">confidence.</span>
-            </h1>
-            <p className="mt-6 max-w-xl text-xl text-white/75 leading-relaxed hero-animate" style={{ animationDelay: '0.45s' }}>
-              Connect with verified construction professionals. Get transparent pricing, real-time project tracking, and guaranteed quality.
-            </p>
-            <div className="mt-10 flex flex-wrap gap-4 hero-animate" style={{ animationDelay: '0.65s' }}>
-              <Button size="lg" className="h-13 px-8 text-base font-semibold bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg shadow-secondary/30 rounded-xl" onClick={() => navigate('/browse-contractors')}>
-                Find a Contractor <ArrowRight className="ml-2 h-5 w-5" />
+            <div className="hero-animate" style={{ animationDelay: "0.25s" }}>
+              <h1 className="font-heading text-5xl font-extrabold leading-tight text-primary-foreground lg:text-[4.25rem]">
+                Build your vision<br />
+                <span className="text-secondary">with confidence.</span>
+              </h1>
+            </div>
+            <div className="hero-animate" style={{ animationDelay: "0.4s" }}>
+              <p className="max-w-lg text-lg leading-relaxed text-primary-foreground/75">
+                Connect with vetted construction professionals. Transparent pricing,
+                real-time milestones, and escrow-protected payments — all in one place.
+              </p>
+            </div>
+            <div className="hero-animate flex flex-wrap gap-3 pt-2" style={{ animationDelay: "0.55s" }}>
+              <Button size="lg" className="h-12 px-8 text-base bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg" onClick={() => navigate("/browse-contractors")}>
+                Find a Contractor <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
-              <Button size="lg" variant="outline" className="h-13 px-8 text-base font-semibold border-white/30 text-white hover:bg-white/10 rounded-xl backdrop-blur-sm" onClick={() => navigate('/register')}>
+              <Button size="lg" variant="outline" className="h-12 px-8 text-base border-white/30 text-primary-foreground bg-white/10 hover:bg-white/20 backdrop-blur-sm" onClick={() => navigate("/register")}>
                 Join as Contractor
               </Button>
             </div>
-          </div>
-        </div>
-        {/* Decorative bottom fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background to-transparent" />
-      </section>
-
-      {/* ── Stats ── */}
-      <section className="py-16 bg-background">
-        <div className="container">
-          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
-            {[
-              { value: "2,500+", label: "Verified Contractors", icon: Users },
-              { value: "15K+",   label: "Projects Completed",  icon: CheckCircle },
-              { value: "4.8★",   label: "Average Rating",      icon: Star },
-              { value: "$50M+",  label: "Projects Managed",    icon: TrendingUp },
-            ].map((stat, i) => (
-              <div key={stat.label} className="sr sr-up group relative overflow-hidden rounded-2xl border border-border bg-card p-6 text-center shadow-sm hover:shadow-md transition-shadow" style={{ transitionDelay: `${i * 0.1}s` }}>
-                <div className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                  <stat.icon className="h-5 w-5 text-secondary" />
-                </div>
-                <p className="font-heading text-3xl font-extrabold text-foreground">{stat.value}</p>
-                <p className="mt-1 text-sm text-muted-foreground">{stat.label}</p>
+            <div className="hero-animate flex items-center gap-4 pt-2 text-sm text-primary-foreground/70" style={{ animationDelay: "0.7s" }}>
+              <div className="flex -space-x-2">
+                {(["#c4a265","#b8905a","#a67c4d","#946e42"] as const).map((bg, i) => (
+                  <div key={i} className="h-8 w-8 rounded-full border-2 border-primary/50 flex items-center justify-center text-xs font-bold text-white" style={{ backgroundColor: bg }}>
+                    {["S","J","A","M"][i]}
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── How it Works ── */}
-      <section className="py-20 lg:py-28 bg-muted/40">
-        <div className="container">
-          <div className="text-center mb-16">
-            <span className="inline-block rounded-full bg-secondary/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-secondary sr sr-up">Simple Process</span>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-foreground lg:text-4xl sr sr-up" style={{ transitionDelay: '0.1s' }}>Three steps to your dream project</h2>
-          </div>
-          <div className="relative grid gap-8 md:grid-cols-3">
-            {/* Connector line */}
-            <div className="absolute top-10 left-1/4 right-1/4 h-0.5 bg-secondary/20 hidden md:block" />
-            {[
-              { icon: Users,       title: "Browse & Select",    desc: "Explore verified contractors, compare ratings, and find the perfect match for your project.", color: "bg-blue-50 text-blue-600" },
-              { icon: Shield,      title: "Secure & Manage",    desc: "Submit your project details, agree on terms, and track every milestone in real-time.",        color: "bg-amber-50 text-amber-600" },
-              { icon: CheckCircle, title: "Complete & Review",  desc: "Approve the finished work, release payment, and share your experience with the community.",    color: "bg-green-50 text-green-600" },
-            ].map((step, i) => (
-              <div key={step.title} className="sr sr-right relative flex flex-col items-center text-center p-8 rounded-2xl bg-card border border-border shadow-sm hover:shadow-lg transition-all hover:-translate-y-1" style={{ transitionDelay: `${i * 0.15}s` }}>
-                <div className={`flex h-16 w-16 items-center justify-center rounded-2xl ${step.color} mb-4`}>
-                  <step.icon className="h-8 w-8" />
-                </div>
-                <div className="text-xs font-bold tracking-widest text-secondary mb-2">STEP {i + 1}</div>
-                <h3 className="font-heading text-xl font-bold text-foreground">{step.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Top Contractors ── */}
-      <section className="py-20 lg:py-28 bg-background">
-        <div className="container">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-12">
-            <div className="sr sr-up">
-              <span className="inline-block rounded-full bg-secondary/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-secondary">Top Rated</span>
-              <h2 className="mt-3 font-heading text-3xl font-bold text-foreground lg:text-4xl">Top Contractors</h2>
-              <p className="mt-2 text-muted-foreground">Highly-rated professionals ready for your project</p>
+              <span><strong className="text-primary-foreground">4.8★</strong> rated by 3,200+ verified homeowners</span>
             </div>
-            <Link to="/browse-contractors" className="sr sr-up inline-flex items-center gap-2 rounded-xl border border-secondary/40 bg-secondary/5 px-5 py-2.5 text-sm font-semibold text-secondary hover:bg-secondary/10 transition-colors self-start sm:self-auto" style={{ transitionDelay: '0.15s' }}>
-              View all contractors <ArrowRight className="h-4 w-4" />
+          </div>
+        </div>
+      </section>
+
+      {/* ── Stats Bar ─────────────────────────────────────────────────────── */}
+      <section className="border-b border-border bg-card shadow-sm">
+        <div className="container py-10">
+          <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+            {STATS.map((stat, i) => (
+              <div key={stat.label} className="text-center">
+                <p className="font-heading text-3xl font-extrabold text-primary lg:text-4xl scroll-reveal pop-in" data-delay={`${i * 120}`}>
+                  {stat.value}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground scroll-reveal fade-up" data-delay={`${i * 120 + 120}`}>
+                  {stat.label}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── About ─────────────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-32 overflow-hidden">
+        <div className="container">
+          <div className="text-center max-w-3xl mx-auto mb-16">
+            <span className="scroll-reveal fade-down inline-block mb-3" data-delay="0">
+              <Badge variant="outline" className="border-secondary/40 text-secondary font-semibold">About NEXA INFRA</Badge>
+            </span>
+            <h2 className="font-heading text-3xl font-bold text-foreground lg:text-5xl leading-tight scroll-reveal fade-up" data-delay="100">
+              The most trusted<br />construction platform
+            </h2>
+            <p className="mt-4 text-muted-foreground text-base leading-relaxed max-w-2xl mx-auto scroll-reveal fade-up" data-delay="200">
+              NEXA INFRA was founded with one mission: make construction projects simple, transparent, and safe for everyone.
+              We connect homeowners and property developers with skilled, verified contractors — backed by smart technology and real accountability.
+            </p>
+          </div>
+
+          <div className="grid gap-12 lg:grid-cols-2 lg:gap-20 items-center mb-20">
+            <div className="scroll-reveal slide-left">
+              <div className="relative rounded-3xl overflow-hidden shadow-xl aspect-[4/3]">
+                <img src={heroImage} alt="Construction professionals" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-primary/70 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6">
+                  <p className="text-primary-foreground font-heading text-xl font-bold">Over 15,000 successful projects</p>
+                  <p className="text-primary-foreground/80 text-sm mt-1">and counting, nationwide</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-6">
+              <h3 className="font-heading text-2xl font-bold text-foreground lg:text-3xl scroll-reveal slide-right" data-delay="60">
+                We believe great construction starts with great trust.
+              </h3>
+              <p className="text-muted-foreground leading-relaxed scroll-reveal slide-right" data-delay="160">
+                Too many homeowners have been let down by contractors who disappear mid-project, quote one price and charge another,
+                or deliver shoddy work with no recourse. NEXA INFRA changes that.
+              </p>
+              <p className="text-muted-foreground leading-relaxed scroll-reveal slide-right" data-delay="240">
+                Every contractor on our platform is verified, rated, and held accountable. Every payment is protected by escrow.
+                Every milestone is tracked in real time — so you're always in control.
+              </p>
+              <div className="flex flex-wrap gap-3 pt-2 scroll-reveal zoom-up" data-delay="320">
+                <Button onClick={() => navigate("/register")} className="gap-2">
+                  Get Started <ArrowRight className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" onClick={() => navigate("/browse-contractors")} className="gap-2">
+                  Browse Contractors
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {ABOUT_PILLARS.map((p, i) => (
+              <div key={p.title} className="rounded-2xl bg-primary p-8 text-primary-foreground scroll-reveal zoom-up" data-delay={`${i * 140}`}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/15 mb-5 scroll-reveal zoom-in" data-delay={`${i * 140 + 200}`}>
+                  <p.icon className="h-6 w-6 text-secondary" />
+                </div>
+                <h4 className="font-heading text-lg font-semibold mb-2">{p.title}</h4>
+                <p className="text-primary-foreground/75 text-sm leading-relaxed">{p.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Why NEXA INFRA ────────────────────────────────────────────────── */}
+      <section className="bg-muted/40 border-y border-border py-20 lg:py-28">
+        <div className="container">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="scroll-reveal fade-down inline-block mb-3" data-delay="0">
+              <Badge variant="outline" className="border-secondary/40 text-secondary font-semibold">Why NEXA INFRA</Badge>
+            </span>
+            <h2 className="font-heading text-3xl font-bold text-foreground lg:text-4xl scroll-reveal fade-up" data-delay="100">
+              Everything you need to build smarter
+            </h2>
+            <p className="mt-3 text-muted-foreground text-base scroll-reveal fade-up" data-delay="200">
+              Every feature is built around making construction projects more transparent, secure, and successful.
+            </p>
+          </div>
+
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((f, i) => (
+              <div key={f.title} className="group rounded-2xl border border-border bg-card p-6 shadow-sm hover:border-secondary/40 hover:shadow-md hover:-translate-y-1 transition-all duration-300 scroll-reveal fade-up" data-delay={`${i * 80}`}>
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/10 group-hover:bg-secondary/20 transition-colors scroll-reveal zoom-in" data-delay={`${i * 80 + 180}`}>
+                  <f.icon className="h-6 w-6 text-secondary" />
+                </div>
+                <h3 className="mt-4 font-heading text-base font-semibold text-foreground scroll-reveal fade-up" data-delay={`${i * 80 + 240}`}>
+                  {f.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground scroll-reveal fade-up" data-delay={`${i * 80 + 300}`}>
+                  {f.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How It Works ──────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28">
+        <div className="container">
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="scroll-reveal fade-down inline-block mb-3" data-delay="0">
+              <Badge variant="outline" className="border-secondary/40 text-secondary font-semibold">How It Works</Badge>
+            </span>
+            <h2 className="font-heading text-3xl font-bold text-foreground lg:text-4xl scroll-reveal fade-up" data-delay="100">
+              Three steps to your ideal project
+            </h2>
+            <p className="mt-3 text-muted-foreground text-base scroll-reveal fade-up" data-delay="200">
+              From finding the right contractor to approving the finished work — simple and straightforward.
+            </p>
+          </div>
+
+          <div className="grid gap-8 md:grid-cols-3 relative">
+            <div className="hidden md:block absolute top-10 left-[33%] right-[33%] h-0.5 bg-border z-0 scroll-reveal fade-in" data-delay="300" />
+            {STEPS.map((step, i) => (
+              <div key={step.title} className="relative z-10 flex flex-col items-center text-center">
+                <div className="relative flex h-20 w-20 items-center justify-center rounded-2xl bg-primary shadow-md scroll-reveal zoom-up" data-delay={`${i * 160}`}>
+                  <step.icon className="h-9 w-9 text-primary-foreground" />
+                  <span className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-secondary text-xs font-bold text-secondary-foreground shadow scroll-reveal pop-in" data-delay={`${i * 160 + 200}`}>
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="mt-5 font-heading text-lg font-semibold text-foreground scroll-reveal fade-up" data-delay={`${i * 160 + 260}`}>
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground max-w-xs scroll-reveal fade-up" data-delay={`${i * 160 + 320}`}>
+                  {step.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-12 text-center scroll-reveal zoom-up" data-delay="600">
+            <Button size="lg" onClick={() => navigate("/register")} className="h-12 px-8 text-base">
+              Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Top Contractors ───────────────────────────────────────────────── */}
+      <section className="bg-muted/40 border-y border-border py-20 lg:py-28">
+        <div className="container">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <span className="scroll-reveal fade-down inline-block mb-3" data-delay="0">
+                <Badge variant="outline" className="border-secondary/40 text-secondary font-semibold">Featured Professionals</Badge>
+              </span>
+              <h2 className="font-heading text-3xl font-bold text-foreground lg:text-4xl scroll-reveal fade-up" data-delay="100">
+                Top-rated contractors
+              </h2>
+              <p className="mt-2 text-muted-foreground scroll-reveal fade-up" data-delay="180">
+                Highly-rated professionals ready for your next project.
+              </p>
+            </div>
+            <Link to="/browse-contractors" className="hidden items-center gap-1 text-sm font-semibold text-secondary hover:underline md:flex shrink-0 ml-4 scroll-reveal slide-right" data-delay="120">
+              View all <ChevronRight className="h-4 w-4" />
             </Link>
           </div>
+
           <div className="grid gap-6 md:grid-cols-3">
             {topContractors.map((c, i) => (
-              <div key={c.id} className="sr sr-right" style={{ transitionDelay: `${i * 0.15}s` }}>
+              <div key={c.id} className="scroll-reveal fade-up" data-delay={`${i * 140}`}>
                 <ContractorCard contractor={c} />
               </div>
             ))}
           </div>
+
+          <div className="mt-8 text-center md:hidden scroll-reveal fade-up" data-delay="200">
+            <Link to="/browse-contractors" className="inline-flex items-center gap-1 text-sm font-semibold text-secondary hover:underline">
+              View all contractors <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* ── Mission / About ── */}
-      <section className="py-20 lg:py-28 bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+      {/* ── Testimonials ──────────────────────────────────────────────────── */}
+      <section className="py-20 lg:py-28">
         <div className="container">
-          <div className="text-center mb-16">
-            <span className="inline-block rounded-full bg-secondary/10 px-4 py-1 text-xs font-bold uppercase tracking-widest text-secondary sr sr-up">Who We Are</span>
-            <h2 className="mt-3 font-heading text-3xl font-bold text-foreground lg:text-4xl sr sr-up" style={{ transitionDelay: '0.1s' }}>Built for the future of construction</h2>
-            <p className="mt-3 max-w-2xl mx-auto text-muted-foreground sr sr-up" style={{ transitionDelay: '0.2s' }}>
-              At NEXA INFRA, we bridge the gap between homeowners and skilled construction professionals through technology, trust, and transparency.
-            </p>
+          <div className="text-center max-w-2xl mx-auto mb-14">
+            <span className="scroll-reveal fade-down inline-block mb-3" data-delay="0">
+              <Badge variant="outline" className="border-secondary/40 text-secondary font-semibold">Testimonials</Badge>
+            </span>
+            <h2 className="font-heading text-3xl font-bold text-foreground lg:text-4xl scroll-reveal fade-up" data-delay="100">
+              What our clients say
+            </h2>
           </div>
 
-          <div className="grid gap-8 lg:grid-cols-2 lg:items-start">
-            {/* Mission list */}
-            <div className="space-y-4 sr sr-right">
-              {[
-                { icon: Award,       title: "Verified Professionals",    desc: "Every contractor is thoroughly vetted, background-checked, and skill-verified before joining our platform." },
-                { icon: Shield,      title: "Protected Payments",        desc: "Funds are held securely in escrow and released only when you approve the completed milestone." },
-                { icon: Zap,         title: "Real-Time Tracking",        desc: "Monitor every project update, message your contractor, and track milestones from your dashboard." },
-                { icon: Star,        title: "Quality Assurance",         desc: "Our review system and quality checks ensure every project meets the highest standards." },
-              ].map((item, i) => (
-                <div key={item.title} className="sr sr-right flex gap-4 rounded-2xl border border-border bg-card p-5 hover:shadow-md transition-all hover:-translate-y-0.5" style={{ transitionDelay: `${i * 0.1}s` }}>
-                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary/10">
-                    <item.icon className="h-5 w-5 text-secondary" />
+          <div className="grid gap-6 md:grid-cols-3">
+            {TESTIMONIALS.map((t, i) => (
+              <div key={t.name} className="rounded-2xl border border-border bg-card p-6 shadow-sm flex flex-col gap-4 hover:shadow-md hover:-translate-y-1 transition-all duration-300 scroll-reveal flip-up" data-delay={`${i * 150}`}>
+                <div className="flex gap-0.5 scroll-reveal fade-in" data-delay={`${i * 150 + 200}`}>
+                  {Array.from({ length: t.rating }).map((_, j) => (
+                    <Star key={j} className="h-4 w-4 fill-secondary text-secondary" />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-foreground/80 flex-1 scroll-reveal fade-up" data-delay={`${i * 150 + 280}`}>
+                  "{t.quote}"
+                </p>
+                <div className="flex items-center gap-3 pt-2 border-t border-border scroll-reveal fade-up" data-delay={`${i * 150 + 360}`}>
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-secondary/20 font-bold text-secondary text-sm scroll-reveal zoom-in" data-delay={`${i * 150 + 400}`}>
+                    {t.name[0]}
                   </div>
                   <div>
-                    <h4 className="font-semibold text-foreground">{item.title}</h4>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.desc}</p>
+                    <p className="text-sm font-semibold text-foreground">{t.name}</p>
+                    <p className="text-xs text-muted-foreground">{t.role}</p>
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
-            {/* CTA card */}
-            <div className="sr sr-right lg:sticky lg:top-24" style={{ transitionDelay: '0.3s' }}>
-              <div className="rounded-3xl overflow-hidden border border-border shadow-xl">
-                <div className="bg-primary p-8 text-center">
-                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-secondary/20">
-                    <HardHat className="h-8 w-8 text-secondary" />
-                  </div>
-                  <h3 className="font-heading text-2xl font-bold text-primary-foreground">Ready to build?</h3>
-                  <p className="mt-2 text-primary-foreground/70 text-sm">Join thousands of homeowners who trust NEXA INFRA for their construction projects.</p>
-                </div>
-                <div className="bg-card p-6 space-y-3">
-                  <Button className="w-full bg-secondary text-secondary-foreground hover:bg-secondary/90 rounded-xl h-12 font-semibold" onClick={() => navigate('/register')}>
-                    Get Started Free <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" className="w-full rounded-xl h-12" onClick={() => navigate('/browse-contractors')}>
-                    Browse Contractors
-                  </Button>
-                  <p className="text-center text-xs text-muted-foreground pt-2">
-                    Already have an account? <Link to="/login" className="text-secondary font-medium hover:underline">Sign in</Link>
-                  </p>
-                </div>
+      {/* ── CTA Banner ────────────────────────────────────────────────────── */}
+      <section className="bg-muted/40 border-t border-border py-20 lg:py-28">
+        <div className="container">
+          <div className="rounded-3xl bg-primary px-8 py-16 text-center shadow-xl lg:px-16 scroll-reveal zoom-in relative overflow-hidden">
+            <div className="pointer-events-none absolute -top-16 -right-16 h-64 w-64 rounded-full bg-white/5" />
+            <div className="pointer-events-none absolute -bottom-20 -left-20 h-80 w-80 rounded-full bg-white/5" />
+            <div className="relative">
+              <span className="scroll-reveal fade-down inline-block mb-4" data-delay="200">
+                <Badge className="bg-secondary/20 text-secondary border-secondary/30 font-semibold">Start Today</Badge>
+              </span>
+              <h2 className="font-heading text-3xl font-extrabold text-primary-foreground lg:text-4xl scroll-reveal fade-up" data-delay="300">
+                Ready to start your project?
+              </h2>
+              <p className="mt-3 text-primary-foreground/75 text-base max-w-xl mx-auto scroll-reveal fade-up" data-delay="400">
+                Join thousands of homeowners and contractors already building smarter on NEXA INFRA.
+              </p>
+              <div className="mt-8 flex flex-wrap justify-center gap-3 scroll-reveal zoom-up" data-delay="500">
+                <Button size="lg" className="h-12 px-8 text-base bg-secondary text-secondary-foreground hover:bg-secondary/90" onClick={() => navigate("/browse-contractors")}>
+                  Find a Contractor <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+                <Button size="lg" variant="outline" className="h-12 px-8 text-base border-white/30 text-primary-foreground bg-white/10 hover:bg-white/20" onClick={() => navigate("/register")}>
+                  List Your Services
+                </Button>
               </div>
             </div>
           </div>
@@ -207,4 +401,3 @@ const Index = () => {
 };
 
 export default Index;
-
