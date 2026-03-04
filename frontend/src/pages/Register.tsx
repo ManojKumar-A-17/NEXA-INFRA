@@ -5,7 +5,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { HardHat, User, Mail, Lock } from "lucide-react";
+import { HardHat, User, Mail, Lock, AlertCircle } from "lucide-react";
 import type { UserRole } from "@/types";
 
 const Register = () => {
@@ -13,12 +13,16 @@ const Register = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("USER");
-  const { register, isLoading } = useAuth();
+  const { register, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await register(name, email, password, role);
+    clearError();
+    
+    const success = await register(name, email, password, role);
+    if (!success) return;
+    
     navigate(role === "CONTRACTOR" ? "/contractor/dashboard" : "/user/dashboard");
   };
 
@@ -44,6 +48,13 @@ const Register = () => {
               </button>
             ))}
           </div>
+
+          {error && (
+            <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

@@ -5,20 +5,50 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { HardHat, Mail, Lock } from "lucide-react";
+import { HardHat, Mail, Lock, AlertCircle } from "lucide-react";
+
+const ADMIN_EMAIL = 'aamanojkumar190@gmail.com';
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, error, clearError } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login(email, password);
-    if (email.includes("admin")) navigate("/admin/dashboard");
-    else if (email.includes("contractor")) navigate("/contractor/dashboard");
-    else navigate("/user/dashboard");
+    clearError();
+    
+    const success = await login(email, password);
+    if (!success) return;
+    
+    // Admin email routing
+    if (email === ADMIN_EMAIL) {
+      navigate("/admin/dashboard");
+      return;
+    }
+    
+    // Get user role from registry for other users
+    try {
+      const registry = localStorage.getItem('nexa_infra_user_registry');
+      if (registry) {
+        const users = JSON.parse(registry);
+        const userData = users[email];
+        if (userData) {
+          if (userData.role === 'CONTRACTOR') {
+            navigate("/contractor/dashboard");
+          } else {
+            navigate("/user/dashboard");
+          }
+          return;
+        }
+      }
+    } catch {
+      // Fallback
+    }
+    
+    // Default fallback
+    navigate("/user/dashboard");
   };
 
   return (
@@ -33,6 +63,13 @@ const Login = () => {
             <h1 className="mt-4 font-heading text-2xl font-bold text-foreground">Welcome back</h1>
             <p className="mt-1 text-sm text-muted-foreground">Sign in to your NEXA INFRA account</p>
           </div>
+
+          {error && (
+            <div className="mb-6 flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              {error}
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
@@ -55,7 +92,7 @@ const Login = () => {
           </form>
 
           <div className="mt-4 text-center text-sm text-muted-foreground">
-            Tip: Use <span className="font-medium">admin@</span>, <span className="font-medium">contractor@</span>, or any email to test different roles.
+            Use <span className="font-medium">{ADMIN_EMAIL}</span> for admin access.
           </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
