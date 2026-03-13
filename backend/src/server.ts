@@ -59,15 +59,24 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // API Routes
 import authRoutes from './routes/auth.routes';
+import projectRoutes from './routes/project.routes';
+import contractorRoutes from './routes/contractor.routes';
+import conversationRoutes from './routes/conversation.routes';
+import paymentRoutes from './routes/payment.routes';
+import reviewRoutes from './routes/review.routes';
+import disputeRoutes from './routes/dispute.routes';
+import notificationRoutes from './routes/notification.routes';
+import adminRoutes from './routes/admin.routes';
 
 app.use('/api/auth', authRoutes);
-// TODO: Import and mount additional routes
-// app.use('/api/users', userRoutes);
-// app.use('/api/contractors', contractorRoutes);
-// app.use('/api/projects', projectRoutes);
-// app.use('/api/payments', paymentRoutes);
-// app.use('/api/reviews', reviewRoutes);
-// app.use('/api/chat', chatRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/contractors', contractorRoutes);
+app.use('/api/conversations', conversationRoutes);
+app.use('/api/payments', paymentRoutes);
+app.use('/api/reviews', reviewRoutes);
+app.use('/api/disputes', disputeRoutes);
+app.use('/api/notifications', notificationRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Error handling middleware (must be last)
 app.use(errorHandler);
