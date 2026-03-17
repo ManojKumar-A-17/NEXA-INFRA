@@ -8,6 +8,8 @@
     "dev": "nodemon src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "seed:contractors": "ts-node scripts/seedRealContractors.ts",
+    "debug:auth": "ts-node scripts/debugAuth.ts",
     "lint": "eslint . --ext .ts",
     "format": "prettier --write \"src/**/*.ts\""
   },

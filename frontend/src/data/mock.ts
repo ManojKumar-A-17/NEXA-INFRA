@@ -6,36 +6,42 @@ export const MOCK_CONTRACTORS: Contractor[] = [
     rating: 4.9, reviewCount: 142, completedProjects: 98, yearsExperience: 16, location: 'Chennai, Tamil Nadu',
     bio: 'Award-winning construction company specializing in premium residential builds and modern interior designs. Over 16 years of excellence in South Indian construction.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 850, certifications: ['Licensed Contractor', 'Vastu Expert', 'Green Building'],
+    email: 'mohamadaadilj.23aid@kongu.edu', password: 'password1',
   },
   {
     id: '2', userId: '11', businessName: 'Keralam Infra Solutions', specialties: ['Commercial', 'Infrastructure', 'Electrical'],
     rating: 4.7, reviewCount: 96, completedProjects: 67, yearsExperience: 13, location: 'Kochi, Kerala',
     bio: 'Leading commercial construction and infrastructure specialist. Delivering large-scale projects from planning to execution with cutting-edge technology.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 950, certifications: ['Licensed Engineer', 'ISO Certified', 'Safety Certified'],
+    email: 'meiajay@gmail.com', password: 'password2',
   },
   {
     id: '3', userId: '12', businessName: 'Bangalore Premier Builders', specialties: ['Commercial', 'Residential', 'Mall Construction'],
     rating: 4.8, reviewCount: 118, completedProjects: 156, yearsExperience: 18, location: 'Bangalore, Karnataka',
     bio: 'Premier construction firm recognized for premium residential and commercial complexes. Specializing in innovative architectural designs and quality execution.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 1000, certifications: ['Licensed Contractor', 'Project Management', 'BIS Certified'],
+    email: 'palani.pmp.ele@gmail.com', password: 'password3',
   },
   {
     id: '4', userId: '13', businessName: 'Coimbatore Express Builders', specialties: ['Plumbing', 'Electrical', 'Foundation Works'],
     rating: 4.6, reviewCount: 134, completedProjects: 187, yearsExperience: 14, location: 'Coimbatore, Tamil Nadu',
     bio: 'Specialized contractor with two decades of expertise in plumbing, electrical and foundation works. Trusted by residential and commercial clients across Tamil Nadu.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 750, certifications: ['Master Electrician', 'Plumbing License', 'Safety Certificate'],
+    email: 'email4@gmail.com', password: 'password4',
   },
   {
     id: '5', userId: '14', businessName: 'Thiruvananthapuram Modern Constructions', specialties: ['Architecture', 'Interior Design', 'Restoration'],
     rating: 4.8, reviewCount: 108, completedProjects: 134, yearsExperience: 11, location: 'Thiruvananthapuram, Kerala',
     bio: 'Modern construction with heritage restoration expertise. Combining traditional Kerala architecture with contemporary design for unique spaces.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 900, certifications: ['Architectural Expert', 'Heritage Restoration', 'Design Certified'],
+    email: 'email5@gmail.com', password: 'password5',
   },
   {
     id: '6', userId: '15', businessName: 'Mysore Quality Projects', specialties: ['Civil Works', 'Landscaping', 'Painting'],
     rating: 4.7, reviewCount: 92, completedProjects: 156, yearsExperience: 12, location: 'Mysore, Karnataka',
     bio: 'Quality-focused construction company known for meticulous civil works and beautiful landscaping. Creating premium living spaces in Mysore and vicinity.',
     avatar: '', verified: true, status: 'APPROVED', hourlyRate: 800, certifications: ['Civil Engineer', 'Environmental Expert', 'Landscape Certified'],
+    email: 'email6@gmail.com', password: 'password6',
   },
 ];
 
