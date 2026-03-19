@@ -9,6 +9,9 @@ import {
   assignContractor,
   addMilestone,
   updateMilestone,
+  approveProject,
+  rejectProject,
+  getPendingProjects,
 } from '../controllers/project.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
@@ -79,5 +82,26 @@ router.post('/:id/milestones', addMilestone);
  * @access  Private (Contractor or Admin)
  */
 router.put('/:id/milestones/:milestoneIndex', updateMilestone);
+
+/**
+ * @route   GET /api/projects/admin/pending
+ * @desc    Get all pending projects for admin approval
+ * @access  Private (Admin only)
+ */
+router.get('/admin/pending', getPendingProjects);
+
+/**
+ * @route   POST /api/projects/:id/approve
+ * @desc    Approve project request and assign contractor
+ * @access  Private (Admin only)
+ */
+router.post('/:id/approve', approveProject);
+
+/**
+ * @route   POST /api/projects/:id/reject
+ * @desc    Reject project request
+ * @access  Private (Admin only)
+ */
+router.post('/:id/reject', rejectProject);
 
 export default router;

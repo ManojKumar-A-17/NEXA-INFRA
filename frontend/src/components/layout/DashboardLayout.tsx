@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 
 const ADMIN_LINKS = [
   { to: "/admin/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { to: "/admin/approvals", icon: Shield, label: "Approvals" },
   { to: "/admin/contractors", icon: Users, label: "Contractors" },
   { to: "/admin/projects", icon: FolderKanban, label: "Projects" },
   { to: "/admin/payments", icon: DollarSign, label: "Payments" },

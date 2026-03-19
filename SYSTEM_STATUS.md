@@ -33,6 +33,8 @@
 - ✅ JWT authentication implemented
 - ✅ Real-time chat via Socket.io ready
 - ✅ Email service configured with Nodemailer
+- ✅ **NEW:** Project approval workflow with auto-contractor assignment
+- ✅ **NEW:** Automatic chat creation on project approval
 
 ### **Frontend Architecture**
 - ✅ React 18 + TypeScript + Vite
@@ -111,6 +113,9 @@ NEXA-INFRA/
 - ✅ Project oversight
 - ✅ Payment tracking
 - ✅ Dispute resolution
+- ✅ **NEW:** Project Request Approvals interface
+- ✅ **NEW:** Contractor auto-assignment on approval
+- ✅ **NEW:** Automatic chat creation with project approval
 
 ---
 

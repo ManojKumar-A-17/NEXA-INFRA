@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import BrowseContractors from "./pages/BrowseContractors";
 import ContractorProfile from "./pages/ContractorProfile";
+import Messages from "./pages/Messages";
 import NotFound from "./pages/NotFound";
 
 import { DashboardLayout } from "./components/layout/DashboardLayout";
@@ -19,6 +20,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminContractors from "./pages/admin/AdminContractors";
 import AdminProjects from "./pages/admin/AdminProjects";
+import AdminProjectApprovals from "./pages/admin/AdminProjectApprovals";
 import AdminPayments from "./pages/admin/AdminPayments";
 import AdminDisputes from "./pages/admin/AdminDisputes";
 import AdminReviews from "./pages/admin/AdminReviews";
@@ -61,6 +63,7 @@ const App = () => (
             <Route path="/register" element={<Register />} />
             <Route path="/browse-contractors" element={<BrowseContractors />} />
             <Route path="/contractor/:id" element={<ContractorProfile />} />
+            <Route path="/messages" element={<ProtectedRoute><Messages /></ProtectedRoute>} />
 
             {/* Dashboard redirect */}
             <Route path="/dashboard" element={<ProtectedRoute><DashboardRedirect /></ProtectedRoute>} />
@@ -68,6 +71,7 @@ const App = () => (
             {/* Admin */}
             <Route path="/admin" element={<ProtectedRoute allowedRoles={['super_admin']}><DashboardLayout /></ProtectedRoute>}>
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="approvals" element={<AdminProjectApprovals />} />
               <Route path="contractors" element={<AdminContractors />} />
               <Route path="projects" element={<AdminProjects />} />
               <Route path="payments" element={<AdminPayments />} />

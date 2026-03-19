@@ -33,6 +33,11 @@ export interface IProject extends Document {
   }>;
   timeline: string;
   notes?: string;
+  approvalStatus: 'pending' | 'approved' | 'rejected';
+  approvedBy?: mongoose.Types.ObjectId;
+  approvedAt?: Date;
+  rejectionReason?: string;
+  conversationId?: mongoose.Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -129,6 +134,30 @@ const projectSchema = new Schema<IProject>(
       trim: true,
       maxlength: [2000, 'Notes cannot exceed 2000 characters'],
     },
+    approvalStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    approvedBy: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    approvedAt: {
+      type: Date,
+      default: null,
+    },
+    rejectionReason: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
+    },
+    conversationId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Conversation',
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -141,6 +170,7 @@ const projectSchema = new Schema<IProject>(
 projectSchema.index({ userId: 1, status: 1 });
 projectSchema.index({ contractorId: 1, status: 1 });
 projectSchema.index({ status: 1, createdAt: -1 });
+projectSchema.index({ approvalStatus: 1, createdAt: -1 });
 
 const Project = mongoose.model<IProject>('Project', projectSchema);
 

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import Project, { ProjectStatus } from '../models/Project';
+import Conversation from '../models/Conversation';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
 
@@ -455,6 +456,151 @@ export const updateMilestone = catchAsync(
       success: true,
       message: 'Milestone updated successfully',
       data: { project },
+    });
+  }
+);
+
+/**
+ * Approve project request (Admin only)
+ * POST /api/projects/:id/approve
+ */
+export const approveProject = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    // Only admin can approve
+    if (req.user.role !== 'super_admin') {
+      return next(new AppError('Only admin can approve projects', 403));
+    }
+
+    const { id } = req.params;
+    const { contractorId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return next(new AppError('Invalid project ID', 400));
+    }
+
+    if (!contractorId || !mongoose.Types.ObjectId.isValid(contractorId)) {
+      return next(new AppError('Valid contractor ID is required', 400));
+    }
+
+    const project = await Project.findById(id);
+
+    if (!project) {
+      return next(new AppError('Project not found', 404));
+    }
+
+    // Update project with approval
+    project.approvalStatus = 'approved';
+    project.approvedBy = new mongoose.Types.ObjectId(req.user.userId);
+    project.approvedAt = new Date();
+    project.contractorId = new mongoose.Types.ObjectId(contractorId);
+    project.status = 'approved';
+
+    // Create automatic conversation between user and contractor
+    const conversation = await Conversation.create({
+      participants: [project.userId, new mongoose.Types.ObjectId(contractorId)],
+      projectId: project._id,
+      subject: `Project: ${project.title}`,
+      isActive: true,
+    });
+
+    // Link conversation to project
+    project.conversationId = conversation._id;
+
+    await project.save();
+
+    // Populate response data
+    const populatedProject = await Project.findById(id)
+      .populate('userId', 'name email')
+      .populate('contractorId', 'company specialties')
+      .populate('conversationId');
+
+    res.status(200).json({
+      success: true,
+      message: 'Project approved successfully and conversation created',
+      data: { project: populatedProject },
+    });
+  }
+);
+
+/**
+ * Reject project request (Admin only)
+ * POST /api/projects/:id/reject
+ */
+export const rejectProject = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    // Only admin can reject
+    if (req.user.role !== 'super_admin') {
+      return next(new AppError('Only admin can reject projects', 403));
+    }
+
+    const { id } = req.params;
+    const { rejectionReason } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return next(new AppError('Invalid project ID', 400));
+    }
+
+    if (!rejectionReason) {
+      return next(new AppError('Rejection reason is required', 400));
+    }
+
+    const project = await Project.findById(id);
+
+    if (!project) {
+      return next(new AppError('Project not found', 404));
+    }
+
+    // Update project with rejection
+    project.approvalStatus = 'rejected';
+    project.approvedBy = new mongoose.Types.ObjectId(req.user.userId);
+    project.approvedAt = new Date();
+    project.rejectionReason = rejectionReason;
+    project.status = 'cancelled';
+
+    await project.save();
+
+    const populatedProject = await Project.findById(id)
+      .populate('userId', 'name email');
+
+    res.status(200).json({
+      success: true,
+      message: 'Project rejected successfully',
+      data: { project: populatedProject },
+    });
+  }
+);
+
+/**
+ * Get pending projects for admin approval
+ * GET /api/projects/admin/pending
+ */
+export const getPendingProjects = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    // Only admin can view pending projects
+    if (req.user.role !== 'super_admin') {
+      return next(new AppError('Only admin can view pending projects', 403));
+    }
+
+    const projects = await Project.find({ approvalStatus: 'pending' })
+      .populate('userId', 'name email phone location')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      message: 'Pending projects retrieved successfully',
+      data: { projects, total: projects.length },
     });
   }
 );
