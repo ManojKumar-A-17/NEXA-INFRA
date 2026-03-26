@@ -5,9 +5,8 @@ import { ProjectCard } from "@/components/ProjectCard";
 import { StatusBadge } from "@/components/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { PageHeader, StatCard } from "@/pages/admin";
+import { API_BASE_URL } from "@/config/env";
 import axios from "axios";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 interface DashboardAnalytics {
   users?: { contractors?: number };

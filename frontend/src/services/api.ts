@@ -5,6 +5,7 @@ import axios, {
   InternalAxiosRequestConfig,
 } from 'axios';
 import { toast } from '../hooks/use-toast';
+import { API_BASE_URL } from '../config/env';
 
 // Types
 export interface AuthTokens {
@@ -27,7 +28,6 @@ export interface ApiResponse<T = unknown> {
 }
 
 // Constants
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const TOKEN_STORAGE_KEY = 'nexa_auth_tokens';
 const LEGACY_TOKEN_STORAGE_KEY = 'nexa_auth_token';
 const USER_STORAGE_KEY = 'nexa_user';

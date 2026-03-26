@@ -7,8 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { HardHat, Mail, Lock, AlertCircle } from "lucide-react";
 
-const ADMIN_EMAIL = 'aamanojkumar190@gmail.com';
-
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,10 +63,6 @@ const Login = () => {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            Use <span className="font-medium">{ADMIN_EMAIL}</span> for admin access.
-          </div>
 
           <p className="mt-6 text-center text-sm text-muted-foreground">
             Don't have an account? <Link to="/register" className="font-medium text-secondary hover:underline">Sign up</Link>

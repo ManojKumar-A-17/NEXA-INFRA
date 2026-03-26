@@ -3,9 +3,8 @@ import { PageHeader, SearchFilter } from "@/pages/admin";
 import { CheckCircle, Star } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { API_BASE_URL } from "@/config/env";
 import axios from "axios";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 interface Contractor {
   _id: string;

@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../config/env';
 
 export interface JWTPayload {
   userId: string;
@@ -6,14 +7,13 @@ export interface JWTPayload {
   role: 'user' | 'contractor' | 'super_admin';
 }
 
-const JWT_SECRET: string = process.env.JWT_SECRET || 'your-fallback-secret-key-change-this';
 const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 /**
  * Generate a JWT token for a user
  */
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN } as any);
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: JWT_EXPIRES_IN } as any);
 };
 
 /**
@@ -21,7 +21,7 @@ export const generateToken = (payload: JWTPayload): string => {
  */
 export const verifyToken = (token: string): JWTPayload => {
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JWTPayload;
+    const decoded = jwt.verify(token, getJwtSecret()) as JWTPayload;
     return decoded;
   } catch (error) {
     throw new Error('Invalid or expired token');
@@ -32,7 +32,7 @@ export const verifyToken = (token: string): JWTPayload => {
  * Generate a refresh token (longer expiration)
  */
 export const generateRefreshToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '30d' } as any);
+  return jwt.sign(payload, getJwtSecret(), { expiresIn: '30d' } as any);
 };
 
 /**

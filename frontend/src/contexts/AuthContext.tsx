@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User, UserRole } from '@/types';
 import axios from 'axios';
+import { API_BASE_URL } from '@/config/env';
 import { TokenManager } from '@/services/api';
 
 const TOKEN_KEY = 'nexa_auth_token';
@@ -23,8 +24,6 @@ interface AuthContextType extends AuthState {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [state, setState] = useState<AuthState>({

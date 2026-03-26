@@ -7,9 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { API_BASE_URL } from "@/config/env";
 import { UserCircle, Briefcase, MapPin, Award } from "lucide-react";
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 interface ContractorProfileForm {
   contractorId: string;

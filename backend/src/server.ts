@@ -1,17 +1,14 @@
+import './config/env';
 import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import { config } from 'dotenv';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
 import { connectDatabase } from './config/database';
 import { errorHandler } from './middleware/error.middleware';
-
-// Load environment variables
-config();
 
 // Initialize Express app
 const app: Application = express();

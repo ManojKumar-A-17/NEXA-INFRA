@@ -5,6 +5,7 @@ import { PageHeader } from "@/pages/admin";
 import { AlertTriangle, CheckCircle, XCircle, Clock, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { API_BASE_URL } from "@/config/env";
 import { useToast } from "@/hooks/use-toast";
 
 interface Dispute {
@@ -26,8 +27,6 @@ interface Dispute {
   createdAt: string;
   updatedAt: string;
 }
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
 
 const statusConfig = {
   open: { badge: "DISPUTED", color: "bg-red-100 text-red-800", icon: AlertTriangle },

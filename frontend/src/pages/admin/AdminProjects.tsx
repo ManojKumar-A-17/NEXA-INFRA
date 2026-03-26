@@ -2,11 +2,10 @@ import { useEffect, useState } from "react";
 import { ProjectCard } from "@/components/ProjectCard";
 import { PageHeader, SearchFilter } from "@/pages/admin";
 import type { ProjectStatus } from "@/types";
+import { API_BASE_URL } from "@/config/env";
 import axios from "axios";
 
 const STATUSES: ("ALL" | ProjectStatus)[] = ["ALL", "pending", "approved", "in_progress", "completed", "disputed", "cancelled"];
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-
 interface Project {
   _id: string;
   title: string;

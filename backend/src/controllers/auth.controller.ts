@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import User, { IUser } from '../models/User';
 import Contractor from '../models/Contractor';
+import { getAdminEmail } from '../config/env';
 import { generateToken } from '../utils/jwt.utils';
 import { AppError, catchAsync } from '../middleware/error.middleware';
-
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'aamanojkumar190@gmail.com';
 
 /**
  * Register a new user
@@ -20,7 +19,7 @@ export const register = catchAsync(
     }
 
     // Prevent registration with admin email
-    if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && role !== 'super_admin') {
+    if (email.toLowerCase() === getAdminEmail().toLowerCase() && role !== 'super_admin') {
       return next(new AppError('This email is reserved for admin access', 400));
     }
 
