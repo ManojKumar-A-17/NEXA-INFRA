@@ -190,17 +190,19 @@ export const getUser = catchAsync(
 
     // Get additional data if contractor
     let contractorData = null;
+    let contractorProfileId: mongoose.Types.ObjectId | null = null;
     if (user.role === 'contractor') {
       contractorData = await Contractor.findOne({ userId: id });
+      contractorProfileId = contractorData?._id || null;
     }
 
     // Get user statistics
     const projectsCount = await Project.countDocuments({
-      $or: [{ userId: id }, { contractorId: id }],
+      $or: [{ userId: id }, ...(contractorProfileId ? [{ contractorId: contractorProfileId }] : [])],
     });
 
     const paymentsCount = await Payment.countDocuments({
-      $or: [{ userId: id }, { contractorId: id }],
+      $or: [{ userId: id }, ...(contractorProfileId ? [{ contractorId: contractorProfileId }] : [])],
     });
 
     res.status(200).json({
@@ -482,6 +484,78 @@ export const getDisputes = catchAsync(
       success: true,
       data: {
         disputes,
+        pagination: {
+          page,
+          limit,
+          total,
+          pages: Math.ceil(total / limit),
+        },
+      },
+    });
+  }
+);
+
+/**
+ * Get all reviews (admin view)
+ * GET /api/admin/reviews
+ */
+export const getReviews = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user || req.user.role !== 'super_admin') {
+      return next(new AppError('Admin access required', 403));
+    }
+
+    const { reviewType, search } = req.query;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    const query: any = {};
+
+    if (reviewType) {
+      query.reviewType = reviewType;
+    }
+
+    const reviews = await Review.find(query)
+      .populate('userId', 'name email avatar')
+      .populate({
+        path: 'contractorId',
+        select: 'company userId',
+        populate: {
+          path: 'userId',
+          select: 'name email',
+        },
+      })
+      .populate('projectId', 'title type status')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .skip((page - 1) * limit);
+
+    const filteredReviews = search
+      ? reviews.filter((review: any) => {
+          const term = String(search).toLowerCase();
+          const reviewerName = review.userId?.name?.toLowerCase?.() || '';
+          const contractorName =
+            review.contractorId?.company?.toLowerCase?.() ||
+            review.contractorId?.userId?.name?.toLowerCase?.() ||
+            '';
+          const projectTitle = review.projectId?.title?.toLowerCase?.() || '';
+          const comment = review.comment?.toLowerCase?.() || '';
+
+          return (
+            reviewerName.includes(term) ||
+            contractorName.includes(term) ||
+            projectTitle.includes(term) ||
+            comment.includes(term)
+          );
+        })
+      : reviews;
+
+    const total = search ? filteredReviews.length : await Review.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        reviews: filteredReviews,
         pagination: {
           page,
           limit,

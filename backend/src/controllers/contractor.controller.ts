@@ -12,7 +12,7 @@ export const getContractors = catchAsync(
   async (req: Request, res: Response): Promise<void> => {
     const { specialty, minRating, availability, search, page = 1, limit = 10 } = req.query;
 
-    const filter: any = { isActive: true };
+    const filter: any = { isActive: true, isVerified: true };
 
     // Filter by specialty
     if (specialty) {
@@ -74,13 +74,43 @@ export const getContractor = catchAsync(
       return next(new AppError('Invalid contractor ID', 400));
     }
 
-    const contractor = await Contractor.findById(id).populate(
+    const contractor = await Contractor.findOne({ _id: id, isActive: true, isVerified: true }).populate(
       'userId',
       'name email avatar location phone'
     );
 
     if (!contractor) {
       return next(new AppError('Contractor not found', 404));
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { contractor },
+    });
+  }
+);
+
+/**
+ * Get current contractor profile
+ * GET /api/contractors/me
+ */
+export const getMyContractorProfile = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      return next(new AppError('Authentication required', 401));
+    }
+
+    if (req.user.role !== 'contractor' && req.user.role !== 'super_admin') {
+      return next(new AppError('Only contractors can access this profile', 403));
+    }
+
+    const contractor = await Contractor.findOne({ userId: req.user.userId }).populate(
+      'userId',
+      'name email avatar location phone'
+    );
+
+    if (!contractor) {
+      return next(new AppError('Contractor profile not found', 404));
     }
 
     res.status(200).json({

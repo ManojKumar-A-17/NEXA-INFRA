@@ -1,8 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { User, UserRole } from '@/types';
 import axios from 'axios';
+import { TokenManager } from '@/services/api';
 
-const ADMIN_EMAIL = 'aamanojkumar190@gmail.com';
 const TOKEN_KEY = 'nexa_auth_token';
 const USER_KEY = 'nexa_auth_user';
 
@@ -17,6 +17,7 @@ interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<boolean>;
   register: (name: string, email: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
   error: string | null;
   clearError: () => void;
 }
@@ -68,6 +69,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       const { data } = response.data;
+      const now = new Date().toISOString();
       const user: User = {
         id: data.user.id,
         email: data.user.email,
@@ -76,11 +78,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         full_name: data.user.name,
         role: (data.user.role?.toLowerCase() || 'user') as UserRole,
         is_active: data.user.isActive !== false,
+        is_verified: data.user.isVerified === true,
+        created_at: data.user.createdAt || now,
+        updated_at: data.user.updatedAt || now,
       };
 
       // Store to localStorage
       localStorage.setItem(TOKEN_KEY, data.token);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      TokenManager.setTokens({
+        access_token: data.token,
+        refresh_token: data.refreshToken || '',
+        token_type: 'bearer',
+        expires_in: data.expiresIn || 0,
+      });
 
       setState({
         user,
@@ -114,6 +125,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
 
         const { data } = response.data;
+        const now = new Date().toISOString();
         const user: User = {
           id: data.user.id,
           email: data.user.email,
@@ -122,11 +134,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           full_name: data.user.name,
           role: (data.user.role?.toLowerCase() || 'user') as UserRole,
           is_active: data.user.isActive !== false,
+          is_verified: data.user.isVerified === true,
+          created_at: data.user.createdAt || now,
+          updated_at: data.user.updatedAt || now,
         };
 
         // Store to localStorage
         localStorage.setItem(TOKEN_KEY, data.token);
         localStorage.setItem(USER_KEY, JSON.stringify(user));
+        TokenManager.setTokens({
+          access_token: data.token,
+          refresh_token: data.refreshToken || '',
+          token_type: 'bearer',
+          expires_in: data.expiresIn || 0,
+        });
 
         setState({
           user,
@@ -150,6 +171,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(() => {
     localStorage.removeItem(TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    TokenManager.setTokens(null);
     setState({
       user: null,
       token: null,
@@ -158,8 +180,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   }, []);
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+    setState((current) => {
+      if (!current.user) {
+        return current;
+      }
+
+      const nextUser = { ...current.user, ...updates };
+      localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+
+      return {
+        ...current,
+        user: nextUser,
+        role: nextUser.role,
+      };
+    });
+  }, []);
+
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, error, clearError }}>
+    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser, error, clearError }}>
       {children}
     </AuthContext.Provider>
   );

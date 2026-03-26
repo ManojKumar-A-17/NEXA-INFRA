@@ -1,7 +1,91 @@
 import { Request, Response, NextFunction } from 'express';
 import Conversation from '../models/Conversation';
+import Contractor from '../models/Contractor';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
+
+type AuthenticatedUser = NonNullable<Request['user']>;
+
+const populateConversationById = (conversationId: mongoose.Types.ObjectId | string) =>
+  Conversation.findById(conversationId)
+    .populate('userId', 'name email avatar phone')
+    .populate({
+      path: 'contractorId',
+      select: 'company specialties rating hourlyRate userId',
+      populate: { path: 'userId', select: 'name email avatar phone' },
+    })
+    .populate('projectId', 'title status budget');
+
+const getConversationAccessFilter = async (user: AuthenticatedUser) => {
+  if (user.role === 'contractor') {
+    const contractor = await Contractor.findOne({ userId: user.userId }).select('_id');
+
+    if (!contractor) {
+      return null;
+    }
+
+    return { contractorId: contractor._id };
+  }
+
+  return { userId: user.userId };
+};
+
+const isConversationParticipant = async (
+  conversation: {
+    userId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId };
+    contractorId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId };
+  },
+  user: AuthenticatedUser
+) => {
+  if (user.role === 'super_admin') {
+    return true;
+  }
+
+  const conversationUserId =
+    (conversation.userId as { _id?: mongoose.Types.ObjectId })._id?.toString() ||
+    conversation.userId.toString();
+  const conversationContractorId =
+    (conversation.contractorId as { _id?: mongoose.Types.ObjectId })._id?.toString() ||
+    conversation.contractorId.toString();
+
+  if (user.role === 'user') {
+    return conversationUserId === user.userId;
+  }
+
+  const contractor = await Contractor.findOne({ userId: user.userId }).select('_id');
+  return conversationContractorId === contractor?._id.toString();
+};
+
+const getConversationParticipantRole = async (
+  conversation: {
+    userId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId };
+    contractorId: mongoose.Types.ObjectId | { _id: mongoose.Types.ObjectId };
+  },
+  user: AuthenticatedUser
+) => {
+  if (user.role === 'super_admin') {
+    return 'admin' as const;
+  }
+
+  const conversationUserId =
+    (conversation.userId as { _id?: mongoose.Types.ObjectId })._id?.toString() ||
+    conversation.userId.toString();
+
+  if (conversationUserId === user.userId) {
+    return 'user' as const;
+  }
+
+  const contractor = await Contractor.findOne({ userId: user.userId }).select('_id');
+  const conversationContractorId =
+    (conversation.contractorId as { _id?: mongoose.Types.ObjectId })._id?.toString() ||
+    conversation.contractorId.toString();
+
+  if (contractor?._id.toString() === conversationContractorId) {
+    return 'contractor' as const;
+  }
+
+  return null;
+};
 
 /**
  * Get all conversations for the current user
@@ -13,14 +97,28 @@ export const getConversations = catchAsync(
       return next(new AppError('Authentication required', 401));
     }
 
-    const filter: any = { isActive: true };
+    const accessFilter = await getConversationAccessFilter(req.user);
 
-    // Find conversations where user is either the user or contractor
-    filter.$or = [{ userId: req.user.userId }, { contractorId: req.user.userId }];
+    if (!accessFilter) {
+      res.status(200).json({
+        success: true,
+        data: { conversations: [] },
+      });
+      return;
+    }
+
+    const filter: any =
+      req.user.role === 'super_admin'
+        ? { isActive: true }
+        : { isActive: true, ...accessFilter };
 
     const conversations = await Conversation.find(filter)
       .populate('userId', 'name email avatar')
-      .populate('contractorId', 'company specialties rating')
+      .populate({
+        path: 'contractorId',
+        select: 'company specialties rating hourlyRate userId',
+        populate: { path: 'userId', select: 'name email avatar phone' },
+      })
       .populate('projectId', 'title status')
       .sort({ lastMessageTime: -1 });
 
@@ -47,20 +145,14 @@ export const getConversation = catchAsync(
       return next(new AppError('Invalid conversation ID', 400));
     }
 
-    const conversation = await Conversation.findById(id)
-      .populate('userId', 'name email avatar phone')
-      .populate('contractorId', 'company specialties rating hourlyRate')
-      .populate('projectId', 'title status budget');
+    const conversation = await populateConversationById(id);
 
     if (!conversation) {
       return next(new AppError('Conversation not found', 404));
     }
 
     // Check permission
-    if (
-      conversation.userId._id.toString() !== req.user.userId &&
-      conversation.contractorId._id.toString() !== req.user.userId
-    ) {
+    if (!(await isConversationParticipant(conversation, req.user))) {
       return next(new AppError('You do not have permission to view this conversation', 403));
     }
 
@@ -129,9 +221,7 @@ export const createConversation = catchAsync(
       },
     });
 
-    const populatedConversation = await Conversation.findById(conversation._id)
-      .populate('userId', 'name email avatar')
-      .populate('contractorId', 'company specialties rating');
+    const populatedConversation = await populateConversationById(conversation._id);
 
     res.status(201).json({
       success: true,
@@ -169,10 +259,9 @@ export const sendMessage = catchAsync(
     }
 
     // Check permission
-    const isUser = conversation.userId.toString() === req.user.userId;
-    const isContractor = conversation.contractorId.toString() === req.user.userId;
+    const participantRole = await getConversationParticipantRole(conversation, req.user);
 
-    if (!isUser && !isContractor) {
+    if (!participantRole) {
       return next(new AppError('You do not have permission to send messages in this conversation', 403));
     }
 
@@ -190,7 +279,7 @@ export const sendMessage = catchAsync(
     conversation.lastMessageTime = new Date();
 
     // Update unread count
-    if (isUser) {
+    if (participantRole === 'user') {
       conversation.unreadCount.contractor += 1;
     } else {
       conversation.unreadCount.user += 1;
@@ -198,9 +287,7 @@ export const sendMessage = catchAsync(
 
     await conversation.save();
 
-    const populatedConversation = await Conversation.findById(id)
-      .populate('userId', 'name email avatar')
-      .populate('contractorId', 'company specialties rating');
+    const populatedConversation = await populateConversationById(id);
 
     res.status(201).json({
       success: true,
@@ -233,10 +320,9 @@ export const markAsRead = catchAsync(
     }
 
     // Check permission
-    const isUser = conversation.userId.toString() === req.user.userId;
-    const isContractor = conversation.contractorId.toString() === req.user.userId;
+    const participantRole = await getConversationParticipantRole(conversation, req.user);
 
-    if (!isUser && !isContractor) {
+    if (!participantRole) {
       return next(new AppError('You do not have permission to update this conversation', 403));
     }
 
@@ -248,7 +334,7 @@ export const markAsRead = catchAsync(
     });
 
     // Reset unread count
-    if (isUser) {
+    if (participantRole === 'user') {
       conversation.unreadCount.user = 0;
     } else {
       conversation.unreadCount.contractor = 0;
@@ -256,10 +342,12 @@ export const markAsRead = catchAsync(
 
     await conversation.save();
 
+    const populatedConversation = await populateConversationById(id);
+
     res.status(200).json({
       success: true,
       message: 'Messages marked as read',
-      data: { conversation },
+      data: { conversation: populatedConversation },
     });
   }
 );
@@ -288,9 +376,7 @@ export const deleteConversation = catchAsync(
 
     // Check permission
     if (
-      conversation.userId.toString() !== req.user.userId &&
-      conversation.contractorId.toString() !== req.user.userId &&
-      req.user.role !== 'super_admin'
+      !(await isConversationParticipant(conversation, req.user))
     ) {
       return next(new AppError('You do not have permission to delete this conversation', 403));
     }

@@ -177,6 +177,51 @@ export const getCurrentUser = catchAsync(
 );
 
 /**
+ * Update current user profile
+ * PUT /api/auth/me
+ */
+export const updateCurrentUser = catchAsync(
+  async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    if (!req.user) {
+      return next(new AppError('User not authenticated', 401));
+    }
+
+    const user = await User.findById(req.user.userId);
+
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    const allowedUpdates = ['name', 'phone', 'location', 'avatar'] as const;
+
+    allowedUpdates.forEach((field) => {
+      if (field in req.body) {
+        user[field] = req.body[field];
+      }
+    });
+
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      data: {
+        user: {
+          id: user._id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isVerified: user.isVerified,
+          avatar: user.avatar,
+          phone: user.phone,
+          location: user.location,
+        },
+      },
+    });
+  }
+);
+
+/**
  * Logout user (client-side token removal)
  * POST /api/auth/logout
  */

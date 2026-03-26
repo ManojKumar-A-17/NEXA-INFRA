@@ -5,13 +5,28 @@ import { Footer } from "@/components/layout/Footer";
 import { ContractorCard } from "@/components/ContractorCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { MOCK_CONTRACTORS } from "@/data/mock";
+import { apiClient } from "@/services/api";
 import {
   ArrowRight, Shield, Star, Users, CheckCircle,
   HardHat, Zap, TrendingUp, Lock, MessageSquare, Award,
   Building2, ChevronRight, MapPin, Clock, Handshake,
 } from "lucide-react";
 import heroImage from "@/assets/661874.jpg";
+
+interface ApiContractor {
+  _id: string;
+  company?: string;
+  specialties?: string[];
+  bio?: string;
+  experience?: number;
+  rating?: number;
+  totalProjects?: number;
+  isVerified?: boolean;
+  userId?: {
+    name?: string;
+    location?: string;
+  };
+}
 
 // â”€â”€ Data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
@@ -76,9 +91,34 @@ function useScrollReveal() {
 
 const Index = () => {
   const navigate = useNavigate();
+  const [featuredContractors, setFeaturedContractors] = useState<ApiContractor[]>([]);
   useScrollReveal();
 
-  const topContractors = MOCK_CONTRACTORS.filter(c => c.status === "APPROVED").slice(0, 3);
+  useEffect(() => {
+    const loadFeaturedContractors = async () => {
+      try {
+        const data = await apiClient.get<{ contractors: ApiContractor[] }>("/contractors");
+        setFeaturedContractors((data.contractors || []).slice(0, 3));
+      } catch {
+        setFeaturedContractors([]);
+      }
+    };
+
+    void loadFeaturedContractors();
+  }, []);
+
+  const topContractors = featuredContractors.map((contractor) => ({
+    id: contractor._id,
+    businessName: contractor.company || contractor.userId?.name || "Unnamed contractor",
+    location: contractor.userId?.location || "Location unavailable",
+    yearsExperience: contractor.experience || 0,
+    bio: contractor.bio || "No company bio available yet.",
+    specialties: contractor.specialties || [],
+    rating: contractor.rating || 0,
+    reviewCount: contractor.totalProjects || 0,
+    completedProjects: contractor.totalProjects || 0,
+    verified: contractor.isVerified,
+  }));
 
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">

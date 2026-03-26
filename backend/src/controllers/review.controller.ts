@@ -5,6 +5,11 @@ import Project from '../models/Project';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
 
+const getContractorProfileIdForUser = async (userId: string) => {
+  const contractor = await Contractor.findOne({ userId }).select('_id');
+  return contractor?._id || null;
+};
+
 /**
  * Create a review
  * POST /api/reviews
@@ -46,8 +51,15 @@ export const createReview = catchAsync(
       return next(new AppError('Only project owner can review the contractor', 403));
     }
 
-    if (reviewType === 'contractor_to_user' && project.contractorId?.toString() !== req.user.userId) {
+    const contractorProfileId =
+      reviewType === 'contractor_to_user' ? await getContractorProfileIdForUser(req.user.userId) : null;
+
+    if (reviewType === 'contractor_to_user' && project.contractorId?.toString() !== contractorProfileId?.toString()) {
       return next(new AppError('Only assigned contractor can review the user', 403));
+    }
+
+    if (project.contractorId?.toString() !== contractorId) {
+      return next(new AppError('Reviews must be attached to the assigned contractor for the project', 400));
     }
 
     // Create review
@@ -252,7 +264,9 @@ export const respondToReview = catchAsync(
     }
 
     // Check permission (only contractor being reviewed can respond)
-    if (review.contractorId.toString() !== req.user.userId && req.user.role !== 'super_admin') {
+    const contractorProfileId = await getContractorProfileIdForUser(req.user.userId);
+
+    if (review.contractorId.toString() !== contractorProfileId?.toString() && req.user.role !== 'super_admin') {
       return next(new AppError('Only the reviewed contractor can respond', 403));
     }
 

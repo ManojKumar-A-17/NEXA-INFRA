@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { register, login, getCurrentUser, logout } from '../controllers/auth.controller';
+import { register, login, getCurrentUser, updateCurrentUser, logout } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
@@ -24,6 +24,13 @@ router.post('/login', login);
  * @access  Private
  */
 router.get('/me', authenticate, getCurrentUser);
+
+/**
+ * @route   PUT /api/auth/me
+ * @desc    Update current user profile
+ * @access  Private
+ */
+router.put('/me', authenticate, updateCurrentUser);
 
 /**
  * @route   POST /api/auth/logout

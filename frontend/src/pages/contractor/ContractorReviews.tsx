@@ -1,10 +1,68 @@
-import { MOCK_REVIEWS } from "@/data/mock";
+import { useEffect, useMemo, useState } from "react";
 import { Star } from "lucide-react";
 import { MetricCard } from "@/components/MetricCard";
+import { apiClient } from "@/services/api";
+
+interface ApiReview {
+  _id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  userId?: {
+    name?: string;
+  };
+  projectId?: {
+    title?: string;
+  };
+}
+
+interface ReviewStats {
+  averageRating: number;
+  totalReviews: number;
+  ratingDistribution: Record<number, number>;
+}
 
 const ContractorReviews = () => {
-  const myReviews = MOCK_REVIEWS.filter(r => r.contractorId === "1");
-  const avgRating = myReviews.length > 0 ? (myReviews.reduce((s, r) => s + r.rating, 0) / myReviews.length).toFixed(1) : "0";
+  const [reviews, setReviews] = useState<ApiReview[]>([]);
+  const [stats, setStats] = useState<ReviewStats>({
+    averageRating: 0,
+    totalReviews: 0,
+    ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadReviews = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const contractorData = await apiClient.get<{ contractor: { _id: string } }>("/contractors/me");
+        const contractorId = contractorData.contractor?._id;
+
+        if (!contractorId) {
+          setReviews([]);
+          return;
+        }
+
+        const reviewData = await apiClient.get<{ reviews: ApiReview[]; stats: ReviewStats }>(
+          `/reviews/contractor/${contractorId}`
+        );
+
+        setReviews(Array.isArray(reviewData.reviews) ? reviewData.reviews : []);
+        setStats(reviewData.stats || { averageRating: 0, totalReviews: 0, ratingDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } });
+      } catch (requestError) {
+        setError("Unable to load reviews right now.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    void loadReviews();
+  }, []);
+
+  const fiveStarReviews = useMemo(() => stats.ratingDistribution?.[5] || 0, [stats]);
 
   return (
     <div className="space-y-6">
@@ -14,33 +72,42 @@ const ContractorReviews = () => {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <MetricCard title="Average Rating" value={avgRating} icon={Star} />
-        <MetricCard title="Total Reviews" value={myReviews.length} icon={Star} />
-        <MetricCard title="5-Star Reviews" value={myReviews.filter(r => r.rating === 5).length} icon={Star} />
+        <MetricCard title="Average Rating" value={stats.averageRating.toFixed(1)} icon={Star} />
+        <MetricCard title="Total Reviews" value={stats.totalReviews} icon={Star} />
+        <MetricCard title="5-Star Reviews" value={fiveStarReviews} icon={Star} />
       </div>
 
+      {loading && <div className="text-sm text-muted-foreground">Loading reviews...</div>}
+      {error && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+
       <div className="space-y-4">
-        {myReviews.map(r => (
-          <div key={r.id} className="rounded-lg border border-border bg-card p-5 shadow-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium text-foreground">{r.userName}</p>
-                {r.projectTitle && <p className="text-xs text-muted-foreground">Project: {r.projectTitle}</p>}
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="flex">
-                  {[1,2,3,4,5].map(i => (
-                    <Star key={i} className={`h-4 w-4 ${i <= r.rating ? 'fill-warning text-warning' : 'text-muted'}`} />
-                  ))}
-                </div>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                </span>
-              </div>
-            </div>
-            <p className="mt-3 text-sm text-muted-foreground">{r.comment}</p>
+        {!loading && reviews.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground">
+            No client reviews available yet.
           </div>
-        ))}
+        ) : (
+          reviews.map((review) => (
+            <div key={review._id} className="rounded-lg border border-border bg-card p-5 shadow-card">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-foreground">{review.userId?.name || "Client"}</p>
+                  {review.projectId?.title && <p className="text-xs text-muted-foreground">Project: {review.projectId.title}</p>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((index) => (
+                      <Star key={index} className={`h-4 w-4 ${index <= review.rating ? "fill-warning text-warning" : "text-muted"}`} />
+                    ))}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {new Date(review.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                  </span>
+                </div>
+              </div>
+              <p className="mt-3 text-sm text-muted-foreground">{review.comment}</p>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );

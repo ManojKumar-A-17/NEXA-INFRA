@@ -1,8 +1,46 @@
 import { Request, Response, NextFunction } from 'express';
 import Project, { ProjectStatus } from '../models/Project';
 import Conversation from '../models/Conversation';
+import Contractor from '../models/Contractor';
+import UserContractorMapping from '../models/UserContractorMapping';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
+
+const getContractorProfileIdForUser = async (userId: string) => {
+  const contractor = await Contractor.findOne({ userId }).select('_id');
+  return contractor?._id || null;
+};
+
+const getAllowedStatusTransitions = (
+  currentStatus: ProjectStatus,
+  role: 'user' | 'contractor' | 'super_admin'
+): ProjectStatus[] => {
+  if (role === 'super_admin') {
+    return ['pending', 'approved', 'in_progress', 'completed', 'disputed', 'cancelled'];
+  }
+
+  if (role === 'user') {
+    switch (currentStatus) {
+      case 'pending':
+        return ['cancelled'];
+      case 'approved':
+        return ['cancelled', 'disputed'];
+      case 'in_progress':
+        return ['disputed'];
+      default:
+        return [];
+    }
+  }
+
+  switch (currentStatus) {
+    case 'approved':
+      return ['in_progress'];
+    case 'in_progress':
+      return ['completed', 'disputed'];
+    default:
+      return [];
+  }
+};
 
 /**
  * Create a new project
@@ -70,7 +108,20 @@ export const getProjects = catchAsync(
     if (req.user.role === 'user') {
       filter.userId = req.user.userId;
     } else if (req.user.role === 'contractor') {
-      filter.contractorId = req.user.userId;
+      const contractorProfileId = await getContractorProfileIdForUser(req.user.userId);
+
+      if (!contractorProfileId) {
+        res.status(200).json({
+          success: true,
+          data: {
+            projects: [],
+            count: 0,
+          },
+        });
+        return;
+      }
+
+      filter.contractorId = contractorProfileId;
     }
     // Admin can see all projects (no filter)
 
@@ -122,10 +173,15 @@ export const getProject = catchAsync(
     }
 
     // Check access permission
+    const contractorProfileId =
+      req.user.role === 'contractor'
+        ? await getContractorProfileIdForUser(req.user.userId)
+        : null;
+
     if (
       req.user.role !== 'super_admin' &&
       project.userId._id.toString() !== req.user.userId &&
-      project.contractorId?._id.toString() !== req.user.userId
+      project.contractorId?._id.toString() !== contractorProfileId?.toString()
     ) {
       return next(new AppError('You do not have permission to view this project', 403));
     }
@@ -279,12 +335,28 @@ export const updateProjectStatus = catchAsync(
     }
 
     // Check permission
+    const contractorProfileId =
+      req.user.role === 'contractor'
+        ? await getContractorProfileIdForUser(req.user.userId)
+        : null;
+
     const isOwner = project.userId.toString() === req.user.userId;
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const isContractor = project.contractorId?.toString() === contractorProfileId?.toString();
     const isAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isContractor && !isAdmin) {
       return next(new AppError('You do not have permission to update this project status', 403));
+    }
+
+    const allowedTransitions = getAllowedStatusTransitions(project.status, req.user.role);
+
+    if (!allowedTransitions.includes(status) && project.status !== status) {
+      return next(
+        new AppError(
+          `Project status cannot move from ${project.status} to ${status} for ${req.user.role} users`,
+          400
+        )
+      );
     }
 
     // Update status
@@ -380,8 +452,13 @@ export const addMilestone = catchAsync(
     }
 
     // Check permission
+    const contractorProfileId =
+      req.user.role === 'contractor'
+        ? await getContractorProfileIdForUser(req.user.userId)
+        : null;
+
     const isOwner = project.userId.toString() === req.user.userId;
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const isContractor = project.contractorId?.toString() === contractorProfileId?.toString();
 
     if (!isOwner && !isContractor && req.user.role !== 'super_admin') {
       return next(new AppError('You do not have permission to add milestones', 403));
@@ -433,7 +510,12 @@ export const updateMilestone = catchAsync(
     }
 
     // Check permission
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const contractorProfileId =
+      req.user.role === 'contractor'
+        ? await getContractorProfileIdForUser(req.user.userId)
+        : null;
+
+    const isContractor = project.contractorId?.toString() === contractorProfileId?.toString();
 
     if (!isContractor && req.user.role !== 'super_admin') {
       return next(new AppError('Only assigned contractor can update milestones', 403));
@@ -492,20 +574,66 @@ export const approveProject = catchAsync(
       return next(new AppError('Project not found', 404));
     }
 
+    if (project.approvalStatus !== 'pending') {
+      return next(new AppError('This project has already been reviewed', 400));
+    }
+
+    const contractor = await Contractor.findById(contractorId).select('_id userId company specialties');
+
+    if (!contractor) {
+      return next(new AppError('Contractor not found', 404));
+    }
+
     // Update project with approval
     project.approvalStatus = 'approved';
     project.approvedBy = new mongoose.Types.ObjectId(req.user.userId);
     project.approvedAt = new Date();
-    project.contractorId = new mongoose.Types.ObjectId(contractorId);
+    project.contractorId = contractor._id;
     project.status = 'approved';
 
-    // Create automatic conversation between user and contractor
-    const conversation = await Conversation.create({
-      participants: [project.userId, new mongoose.Types.ObjectId(contractorId)],
+    await UserContractorMapping.findOneAndUpdate(
+      {
+        userId: project.userId,
+        contractorId: contractor._id,
+      },
+      {
+        $set: {
+          lastInteraction: new Date(),
+        },
+        $setOnInsert: {
+          userId: project.userId,
+          contractorId: contractor._id,
+        },
+      },
+      {
+        upsert: true,
+        new: true,
+      }
+    );
+
+    // Create or reuse conversation between user and contractor for this project
+    let conversation = await Conversation.findOne({
+      userId: project.userId,
+      contractorId: contractor._id,
       projectId: project._id,
-      subject: `Project: ${project.title}`,
       isActive: true,
     });
+
+    if (!conversation) {
+      conversation = await Conversation.create({
+        userId: project.userId,
+        contractorId: contractor._id,
+        projectId: project._id,
+        messages: [],
+        lastMessage: null,
+        lastMessageTime: null,
+        unreadCount: {
+          user: 0,
+          contractor: 0,
+        },
+        isActive: true,
+      });
+    }
 
     // Link conversation to project
     project.conversationId = conversation._id;
@@ -556,6 +684,10 @@ export const rejectProject = catchAsync(
 
     if (!project) {
       return next(new AppError('Project not found', 404));
+    }
+
+    if (project.approvalStatus !== 'pending') {
+      return next(new AppError('This project has already been reviewed', 400));
     }
 
     // Update project with rejection

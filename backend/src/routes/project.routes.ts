@@ -35,6 +35,13 @@ router.post('/', createProject);
 router.get('/', getProjects);
 
 /**
+ * @route   GET /api/projects/admin/pending
+ * @desc    Get all pending projects for admin approval
+ * @access  Private (Admin only)
+ */
+router.get('/admin/pending', getPendingProjects);
+
+/**
  * @route   GET /api/projects/:id
  * @desc    Get single project by ID
  * @access  Private
@@ -82,13 +89,6 @@ router.post('/:id/milestones', addMilestone);
  * @access  Private (Contractor or Admin)
  */
 router.put('/:id/milestones/:milestoneIndex', updateMilestone);
-
-/**
- * @route   GET /api/projects/admin/pending
- * @desc    Get all pending projects for admin approval
- * @access  Private (Admin only)
- */
-router.get('/admin/pending', getPendingProjects);
 
 /**
  * @route   POST /api/projects/:id/approve

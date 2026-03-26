@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { PageHeader, SearchFilter } from "@/pages/admin";
-import { CheckCircle, XCircle, Star } from "lucide-react";
+import { CheckCircle, Star } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -24,12 +24,15 @@ const AdminContractors = () => {
   const [filter, setFilter] = useState<"ALL" | "VERIFIED" | "UNVERIFIED" | "ACTIVE" | "INACTIVE">("ALL");
   const [contractors, setContractors] = useState<Contractor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [verifyingId, setVerifyingId] = useState<string | null>(null);
   const token = localStorage.getItem('nexa_auth_token');
 
   useEffect(() => {
     const fetchContractors = async () => {
       try {
         setLoading(true);
+        setError(null);
         const res = await axios.get(`${API_BASE_URL}/admin/contractors`, {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -37,6 +40,7 @@ const AdminContractors = () => {
         setContractors(allContractors);
       } catch (err) {
         console.error('Error fetching contractors:', err);
+        setError('Failed to load contractors');
       } finally {
         setLoading(false);
       }
@@ -64,11 +68,33 @@ const AdminContractors = () => {
     return matchSearch && matchFilter;
   });
 
+  const verifyContractor = async (contractorId: string) => {
+    try {
+      setVerifyingId(contractorId);
+      setError(null);
+      await axios.put(
+        `${API_BASE_URL}/admin/contractors/${contractorId}/verify`,
+        { isVerified: true },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setContractors((current) =>
+        current.map((contractor) =>
+          contractor._id === contractorId ? { ...contractor, isVerified: true } : contractor
+        )
+      );
+    } catch (err) {
+      console.error('Error verifying contractor:', err);
+      setError('Failed to verify contractor');
+    } finally {
+      setVerifyingId(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
         title="Contractor Management"
-        description="Approve, reject, and manage contractors"
+        description="Verify and manage contractors"
       />
 
       <SearchFilter
@@ -77,6 +103,12 @@ const AdminContractors = () => {
         placeholder="Search contractors..."
         filters={filters}
       />
+
+      {error && (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Loading contractors...</div>
@@ -119,11 +151,14 @@ const AdminContractors = () => {
                   <TableCell className="text-right">
                     {!c.isVerified && (
                       <div className="flex gap-2 justify-end">
-                        <Button size="sm" className="text-success border-success/30">
-                          <CheckCircle className="mr-1 h-3.5 w-3.5" /> Verify
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-destructive border-destructive/30">
-                          <XCircle className="mr-1 h-3.5 w-3.5" /> Reject
+                        <Button
+                          size="sm"
+                          className="text-success border-success/30"
+                          onClick={() => void verifyContractor(c._id)}
+                          disabled={verifyingId === c._id}
+                        >
+                          <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                          {verifyingId === c._id ? 'Verifying...' : 'Verify'}
                         </Button>
                       </div>
                     )}

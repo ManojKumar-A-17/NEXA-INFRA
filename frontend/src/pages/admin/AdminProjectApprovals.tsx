@@ -1,223 +1,103 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertCircle, Check, CheckCircle, Loader, RefreshCw, X } from "lucide-react";
 import { PageHeader } from "@/pages/admin";
-import { MOCK_CONTRACTORS, MOCK_PROJECTS } from "@/data/mock";
-import { Check, X, AlertCircle, Loader, CheckCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { workflowApi, type WorkflowContractorSummary, type WorkflowProject } from "@/services/workflowApi";
 
-interface PendingProject {
-  _id: string;
-  title: string;
-  description: string;
-  budget: number;
-  userId: { name: string; email: string };
-  location: string;
-  createdAt: string;
-  approvalStatus: "pending" | "approved" | "rejected";
-}
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(value);
 
 const AdminProjectApprovals = () => {
-  const [projects, setProjects] = useState<PendingProject[]>([]);
+  const [projects, setProjects] = useState<WorkflowProject[]>([]);
+  const [contractors, setContractors] = useState<WorkflowContractorSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [approving, setApproving] = useState<string | null>(null);
+  const [actingOnProjectId, setActingOnProjectId] = useState<string | null>(null);
+  const [selectedContractors, setSelectedContractors] = useState<Record<string, string>>({});
   const [rejectionReasons, setRejectionReasons] = useState<Record<string, string>>({});
 
-  // Mock users for different user IDs
-  const mockUsers: Record<string, { name: string; email: string }> = {
-    '1': { name: 'Rajesh Kumar', email: 'rajesh@example.com' },
-    '2': { name: 'Priya Sharma', email: 'priya@example.com' },
-    '3': { name: 'Arjun Kumar', email: 'arjun@example.com' },
-    '5': { name: 'Deepak Iyer', email: 'deepak@example.com' },
-    '6': { name: 'Ananya Patel', email: 'ananya@example.com' },
-  };
-
-  const token = localStorage.getItem('nexa_auth_token');
-
-  useEffect(() => {
-    fetchPendingProjects();
-  }, []);
-
-  const fetchPendingProjects = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
       setError(null);
 
-      // Get projects from localStorage (user requests)
-      const storedProjects = localStorage.getItem("user_project_requests");
-      const userRequests = storedProjects ? JSON.parse(storedProjects) : [];
+      const [pendingProjects, availableContractors] = await Promise.all([
+        workflowApi.getPendingProjects(),
+        workflowApi.getApprovedContractors(),
+      ]);
 
-      console.log("Mock projects:", MOCK_PROJECTS.length);
-      console.log("User requests from localStorage:", userRequests.length);
-      console.log("User requests data:", userRequests);
-
-      // Combine all projects
-      const allProjects = [
-        ...MOCK_PROJECTS.map(p => ({
-          ...p,
-          source: 'mock'
-        })),
-        ...userRequests.map(p => ({
-          ...p,
-          source: 'user'
-        }))
-      ];
-
-      // Filter for pending projects
-      const mockPendingProjects: PendingProject[] = allProjects
-        .filter(p => !p.contractorId && p.source !== 'approved')
-        .map(p => {
-          const userId = p.userId?.toString() || '3';
-          const userInfo = mockUsers[userId] || { name: p.userName, email: `user${userId}@example.com` };
-          
-          return {
-            _id: p.id,
-            title: p.title,
-            description: p.description,
-            budget: p.budget,
-            userId: userInfo,
-            location: p.location || "India",
-            createdAt: p.startDate || p.createdAt || new Date().toISOString(),
-            approvalStatus: "pending" as const,
-          };
-        });
-
-      console.log("Pending projects to display:", mockPendingProjects);
-      setProjects(mockPendingProjects);
-    } catch (err: any) {
-      console.error("Error fetching projects:", err);
-      setError(err.response?.data?.message || "Failed to load pending projects");
+      setProjects(pendingProjects);
+      setContractors(availableContractors);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load pending approvals");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    void loadData();
+  }, []);
+
+  const contractorOptions = useMemo(
+    () =>
+      contractors.map((contractor) => ({
+        value: contractor._id,
+        label: contractor.company || contractor.userId?.name || "Unnamed contractor",
+      })),
+    [contractors]
+  );
+
   const handleApprove = async (projectId: string) => {
-    const project = projects.find(p => p._id === projectId);
-    if (!project) return;
+    const contractorId = selectedContractors[projectId];
 
-    try {
-      setApproving(projectId);
-
-      // Pick a random contractor to assign
-      const randomContractor = MOCK_CONTRACTORS[Math.floor(Math.random() * MOCK_CONTRACTORS.length)];
-
-      // Get the original project from localStorage or mock
-      const storedProjects = localStorage.getItem("user_project_requests");
-      const userRequests = storedProjects ? JSON.parse(storedProjects) : [];
-      
-      const originalProject = userRequests.find(p => p.id === projectId) || 
-                             MOCK_PROJECTS.find(p => p.id === projectId);
-
-      if (!originalProject) {
-        setError("Project not found");
-        return;
-      }
-
-      // Create a conversation between user and contractor
-      const conversations = localStorage.getItem("conversations") || JSON.stringify([]);
-      const conversationsList = JSON.parse(conversations);
-      
-      const newConversation = {
-        id: `conv-${Date.now()}`,
-        projectId: projectId,
-        userId: originalProject.userId,
-        userName: originalProject.userName,
-        contractorId: randomContractor.userId,
-        contractorName: randomContractor.businessName,
-        messages: [],
-        createdAt: new Date().toISOString(),
-      };
-
-      conversationsList.push(newConversation);
-      localStorage.setItem("conversations", JSON.stringify(conversationsList));
-
-      // Update the project with contractor and approval
-      const updatedUserRequests = userRequests.map(p => 
-        p.id === projectId 
-          ? {
-              ...p,
-              contractorId: randomContractor.id,
-              approvalStatus: "approved",
-              status: "active",
-              conversationId: newConversation.id,
-              approvedAt: new Date().toISOString(),
-            }
-          : p
-      );
-
-      localStorage.setItem("user_project_requests", JSON.stringify(updatedUserRequests));
-
-      // Update state to remove from pending
-      setProjects(projects.filter(p => p._id !== projectId));
-      setApproving(null);
-      
-      alert(`✅ Project approved and assigned to ${randomContractor.businessName}!\n\nA chat has been created for both the user and contractor to communicate.`);
-    } catch (err: any) {
-      console.error("Error approving project:", err);
-      setError(err.message || "Failed to approve project");
-      setApproving(null);
-    }
-  };
-
-  const handleReject = async (projectId: string) => {
-    const reason = rejectionReasons[projectId];
-    if (!reason || !reason.trim()) {
-      setError("Please provide a rejection reason");
+    if (!contractorId) {
+      setError("Select a contractor before approving the request.");
       return;
     }
 
     try {
-      setApproving(projectId);
+      setActingOnProjectId(projectId);
+      await workflowApi.approveProject(projectId, contractorId);
+      setProjects((current) => current.filter((project) => project._id !== projectId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to approve project");
+    } finally {
+      setActingOnProjectId(null);
+    }
+  };
 
-      // Get the original project from localStorage or mock
-      const storedProjects = localStorage.getItem("user_project_requests");
-      const userRequests = storedProjects ? JSON.parse(storedProjects) : [];
-      
-      // Update the project with rejection status
-      const updatedUserRequests = userRequests.map(p => 
-        p.id === projectId 
-          ? {
-              ...p,
-              approvalStatus: "rejected",
-              status: "cancelled",
-              rejectionReason: reason,
-              rejectedAt: new Date().toISOString(),
-            }
-          : p
-      );
+  const handleReject = async (projectId: string) => {
+    const reason = rejectionReasons[projectId]?.trim();
 
-      localStorage.setItem("user_project_requests", JSON.stringify(updatedUserRequests));
+    if (!reason) {
+      setError("Please provide a rejection reason.");
+      return;
+    }
 
-      // Update state to remove from pending
-      setProjects(projects.filter(p => p._id !== projectId));
-      setRejectionReasons(prev => {
-        const updated = { ...prev };
-        delete updated[projectId];
-        return updated;
-      });
-      setApproving(null);
-
-      alert(`❌ Project rejected.\n\nReason: ${reason}`);
-    } catch (err: any) {
-      console.error("Error rejecting project:", err);
-      setError(err.message || "Failed to reject project");
-      setApproving(null);
+    try {
+      setActingOnProjectId(projectId);
+      await workflowApi.rejectProject(projectId, reason);
+      setProjects((current) => current.filter((project) => project._id !== projectId));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to reject project");
+    } finally {
+      setActingOnProjectId(null);
     }
   };
 
   if (loading) {
     return (
       <div className="space-y-6">
-        <PageHeader
-          title="Project Approvals"
-          description="Review and approve user project requests"
-        />
-        <div className="text-center py-12">
-          <Loader className="h-8 w-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="text-muted-foreground mt-2">Loading pending projects...</p>
+        <PageHeader title="Project Approvals" description="Review client requests and map them to contractors." />
+        <div className="py-12 text-center">
+          <Loader className="mx-auto h-8 w-8 animate-spin text-muted-foreground" />
+          <p className="mt-2 text-muted-foreground">Loading pending projects...</p>
         </div>
       </div>
     );
@@ -226,58 +106,44 @@ const AdminProjectApprovals = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader
-          title="Project Approvals"
-          description="Review and approve user project requests"
-        />
-        <Button
-          onClick={fetchPendingProjects}
-          disabled={loading}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+        <PageHeader title="Project Approvals" description="Approve or reject client requests and assign contractors." />
+        <Button onClick={() => void loadData()} disabled={loading} variant="outline" size="sm" className="gap-2">
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 flex gap-3">
-          <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+        <div className="flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
           <div>
-            <p className="text-red-900 font-medium">Error</p>
-            <p className="text-red-800 text-sm">{error}</p>
+            <p className="font-medium text-red-900">Error</p>
+            <p className="text-sm text-red-800">{error}</p>
           </div>
         </div>
       )}
 
       {projects.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border p-12 text-center">
-          <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
-          <p className="text-lg font-medium text-foreground">All caught up!</p>
-          <p className="text-muted-foreground mt-1">No pending project approvals at this time</p>
+          <CheckCircle className="mx-auto mb-4 h-12 w-12 text-green-600" />
+          <p className="text-lg font-medium text-foreground">All caught up</p>
+          <p className="mt-1 text-muted-foreground">No client requests are waiting for approval right now.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {projects.map(project => (
+          {projects.map((project) => (
             <div key={project._id} className="rounded-lg border border-border bg-card p-6 shadow-sm">
-              <div className="grid grid-cols-1 gap-4 mb-4 md:grid-cols-2">
-                {/* Project Info */}
+              <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                 <div className="space-y-3">
                   <div>
-                    <h3 className="font-heading text-lg font-semibold text-foreground mb-1">
-                      {project.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {project.description}
-                    </p>
+                    <h3 className="font-heading text-lg font-semibold text-foreground">{project.title}</h3>
+                    <p className="mt-1 text-sm text-muted-foreground">{project.description}</p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <p className="text-muted-foreground">Budget</p>
-                      <p className="font-semibold text-foreground">₹{project.budget.toLocaleString()}</p>
+                      <p className="font-semibold text-foreground">{formatCurrency(project.budget)}</p>
                     </div>
                     <div>
                       <p className="text-muted-foreground">Location</p>
@@ -285,68 +151,83 @@ const AdminProjectApprovals = () => {
                     </div>
                   </div>
 
-                  <div className="space-y-1 pt-2 border-t border-border">
-                    <div>
-                      <p className="text-muted-foreground text-xs">User</p>
-                      <p className="font-medium text-foreground">{project.userId.name}</p>
-                      <p className="text-xs text-muted-foreground">{project.userId.email}</p>
-                    </div>
+                  <div className="border-t border-border pt-2">
+                    <p className="text-xs text-muted-foreground">Client</p>
+                    <p className="font-medium text-foreground">{project.userId.name}</p>
+                    <p className="text-xs text-muted-foreground">{project.userId.email}</p>
                   </div>
                 </div>
 
-                {/* Approval Action */}
                 <div className="space-y-3">
-                  <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                    <p className="text-sm font-medium text-green-900 mb-2">✓ Approve Request</p>
-                    <p className="text-xs text-green-800 mb-3">
-                      Automatically assign a contractor and create a chat channel
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <p className="mb-2 text-sm font-medium text-green-900">Approve And Map</p>
+                    <p className="mb-3 text-xs text-green-800">
+                      Pick the contractor you want to assign. Approval will also open the chat thread.
                     </p>
+                    <Select
+                      value={selectedContractors[project._id] || ""}
+                      onValueChange={(value) =>
+                        setSelectedContractors((current) => ({ ...current, [project._id]: value }))
+                      }
+                    >
+                      <SelectTrigger className="mb-2 bg-white">
+                        <SelectValue placeholder="Select contractor" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {contractorOptions.map((contractor) => (
+                          <SelectItem key={contractor.value} value={contractor.value}>
+                            {contractor.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       size="sm"
-                      className="w-full bg-green-600 hover:bg-green-700 gap-2"
-                      onClick={() => handleApprove(project._id)}
-                      disabled={approving === project._id}
+                      className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => void handleApprove(project._id)}
+                      disabled={actingOnProjectId === project._id || contractorOptions.length === 0}
                     >
                       <Check className="h-4 w-4" />
-                      {approving === project._id ? "Approving..." : "Approve & Assign"}
+                      {actingOnProjectId === project._id ? "Approving..." : "Approve And Assign"}
                     </Button>
                   </div>
 
-                  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
-                    <p className="text-sm font-medium text-red-900 mb-2">✕ Reject Request</p>
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="mb-2 text-sm font-medium text-red-900">Reject Request</p>
                     <textarea
                       placeholder="Enter rejection reason..."
                       value={rejectionReasons[project._id] || ""}
-                      onChange={(e) =>
-                        setRejectionReasons(prev => ({
-                          ...prev,
-                          [project._id]: e.target.value,
+                      onChange={(event) =>
+                        setRejectionReasons((current) => ({
+                          ...current,
+                          [project._id]: event.target.value,
                         }))
                       }
-                      className="w-full text-xs p-2 border border-red-200 rounded mb-2 bg-white text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-300"
+                      className="mb-2 w-full rounded border border-red-200 bg-white p-2 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-red-300"
                       rows={2}
                     />
                     <Button
                       size="sm"
                       variant="outline"
-                      className="w-full border-red-300 text-red-700 hover:bg-red-50 gap-2"
-                      onClick={() => handleReject(project._id)}
-                      disabled={approving === project._id}
+                      className="w-full gap-2 border-red-300 text-red-700 hover:bg-red-50"
+                      onClick={() => void handleReject(project._id)}
+                      disabled={actingOnProjectId === project._id}
                     >
                       <X className="h-4 w-4" />
-                      {approving === project._id ? "Rejecting..." : "Reject"}
+                      {actingOnProjectId === project._id ? "Rejecting..." : "Reject"}
                     </Button>
                   </div>
                 </div>
               </div>
 
               <div className="text-xs text-muted-foreground">
-                Submitted: {new Date(project.createdAt).toLocaleDateString('en-IN', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
+                Submitted:{" "}
+                {new Date(project.createdAt).toLocaleDateString("en-IN", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </div>
             </div>

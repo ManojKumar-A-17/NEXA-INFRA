@@ -9,6 +9,7 @@ import {
   getProjects,
   getPayments,
   getDisputes,
+  getReviews,
   deleteUser,
 } from '../controllers/admin.controller';
 import { authenticate, authorize } from '../middleware/auth.middleware';
@@ -39,5 +40,8 @@ router.get('/payments', getPayments);
 
 // Disputes
 router.get('/disputes', getDisputes);
+
+// Reviews
+router.get('/reviews', getReviews);
 
 export default router;

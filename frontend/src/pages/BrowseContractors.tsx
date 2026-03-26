@@ -1,21 +1,79 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { ContractorCard } from "@/components/ContractorCard";
-import { MOCK_CONTRACTORS } from "@/data/mock";
 import { Input } from "@/components/ui/input";
 import { Search, SlidersHorizontal } from "lucide-react";
+import { apiClient } from "@/services/api";
+
+interface ApiContractor {
+  _id: string;
+  company?: string;
+  specialties?: string[];
+  bio?: string;
+  experience?: number;
+  rating?: number;
+  totalProjects?: number;
+  hourlyRate?: number;
+  isVerified?: boolean;
+  userId?: {
+    name?: string;
+    location?: string;
+  };
+}
 
 const BrowseContractors = () => {
   const [search, setSearch] = useState("");
   const [selectedSpecialty, setSelectedSpecialty] = useState<string | null>(null);
+  const [contractors, setContractors] = useState<ApiContractor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const allSpecialties = Array.from(new Set(MOCK_CONTRACTORS.flatMap(c => c.specialties)));
-  const approved = MOCK_CONTRACTORS.filter(c => c.status === 'APPROVED');
+  useEffect(() => {
+    const loadContractors = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await apiClient.get<{
+          contractors: ApiContractor[];
+        }>("/contractors");
+        setContractors(Array.isArray(data.contractors) ? data.contractors : []);
+      } catch (requestError) {
+        setError("Unable to load contractors right now.");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const filtered = approved.filter(c => {
-    const matchSearch = !search || c.businessName.toLowerCase().includes(search.toLowerCase()) || c.location.toLowerCase().includes(search.toLowerCase());
-    const matchSpec = !selectedSpecialty || c.specialties.includes(selectedSpecialty);
+    void loadContractors();
+  }, []);
+
+  const contractorCards = useMemo(
+    () =>
+      contractors.map((contractor) => ({
+        id: contractor._id,
+        businessName: contractor.company || contractor.userId?.name || "Unnamed contractor",
+        location: contractor.userId?.location || "Location unavailable",
+        yearsExperience: contractor.experience || 0,
+        bio: contractor.bio || "No company bio available yet.",
+        specialties: contractor.specialties || [],
+        rating: contractor.rating || 0,
+        reviewCount: contractor.totalProjects || 0,
+        completedProjects: contractor.totalProjects || 0,
+        verified: contractor.isVerified,
+      })),
+    [contractors]
+  );
+
+  const allSpecialties = Array.from(new Set(contractorCards.flatMap((contractor) => contractor.specialties)));
+
+  const filtered = contractorCards.filter((contractor) => {
+    const normalizedSearch = search.toLowerCase();
+    const matchSearch =
+      !search ||
+      contractor.businessName.toLowerCase().includes(normalizedSearch) ||
+      contractor.location.toLowerCase().includes(normalizedSearch);
+    const matchSpec = !selectedSpecialty || contractor.specialties.includes(selectedSpecialty);
     return matchSearch && matchSpec;
   });
 
@@ -54,11 +112,19 @@ const BrowseContractors = () => {
         </div>
 
         {/* Results */}
-        <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {filtered.map(c => <ContractorCard key={c.id} contractor={c} />)}
-        </div>
+        {error && <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">{error}</div>}
 
-        {filtered.length === 0 && (
+        {loading ? (
+          <div className="mt-12 text-center text-muted-foreground">Loading contractors...</div>
+        ) : (
+          <div className="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {filtered.map((contractor) => (
+              <ContractorCard key={contractor.id} contractor={contractor} />
+            ))}
+          </div>
+        )}
+
+        {!loading && filtered.length === 0 && (
           <div className="mt-12 text-center text-muted-foreground">
             <SlidersHorizontal className="mx-auto h-10 w-10 text-muted" />
             <p className="mt-3">No contractors match your search.</p>

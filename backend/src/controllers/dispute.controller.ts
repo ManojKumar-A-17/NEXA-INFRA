@@ -2,8 +2,23 @@ import { Request, Response, NextFunction } from 'express';
 import Dispute from '../models/Dispute';
 import Project from '../models/Project';
 import Notification from '../models/Notification';
+import Contractor from '../models/Contractor';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
+
+const getContractorProfileForUser = async (userId: string) => {
+  return Contractor.findOne({ userId }).select('_id userId');
+};
+
+const getProjectParticipantIds = async (project: { userId: mongoose.Types.ObjectId; contractorId?: mongoose.Types.ObjectId | null }) => {
+  const contractor = project.contractorId ? await Contractor.findById(project.contractorId).select('_id userId') : null;
+
+  return {
+    projectOwnerUserId: project.userId.toString(),
+    contractorProfileId: contractor?._id?.toString() || null,
+    contractorUserId: contractor?.userId?.toString() || null,
+  };
+};
 
 /**
  * Create dispute
@@ -15,9 +30,10 @@ export const createDispute = catchAsync(
       return next(new AppError('Authentication required', 401));
     }
 
-    const { projectId, subject, description, category, evidence } = req.body;
+    const { projectId, title, subject, description, category, evidence } = req.body;
+    const disputeTitle = typeof title === 'string' && title.trim().length > 0 ? title.trim() : subject;
 
-    if (!projectId || !subject || !description || !category) {
+    if (!projectId || !disputeTitle || !description || !category) {
       return next(new AppError('All required fields must be provided', 400));
     }
 
@@ -32,23 +48,29 @@ export const createDispute = catchAsync(
     }
 
     // Check permission - only project participants can create disputes
+    const contractorProfile = req.user.role === 'contractor' ? await getContractorProfileForUser(req.user.userId) : null;
     const isOwner = project.userId.toString() === req.user.userId;
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const isContractor = project.contractorId?.toString() === contractorProfile?._id?.toString();
 
     if (!isOwner && !isContractor) {
       return next(new AppError('Only project participants can create disputes', 403));
     }
 
     // Determine parties
+    const participantIds = await getProjectParticipantIds(project);
     const raisedBy = new mongoose.Types.ObjectId(req.user.userId);
-    const raisedAgainst = isOwner ? project.contractorId : project.userId;
+    const raisedAgainst = isOwner ? participantIds.contractorUserId : participantIds.projectOwnerUserId;
+
+    if (!raisedAgainst) {
+      return next(new AppError('This project does not have both dispute participants assigned', 400));
+    }
 
     // Create dispute
     const dispute = await Dispute.create({
       projectId,
       raisedBy,
       raisedAgainst,
-      subject,
+      title: disputeTitle,
       description,
       category,
       status: 'open',
@@ -56,7 +78,7 @@ export const createDispute = catchAsync(
     });
 
     // Create notification for the other party
-    const notifyUserId = isOwner ? project.contractorId : project.userId;
+    const notifyUserId = isOwner ? participantIds.contractorUserId : participantIds.projectOwnerUserId;
     if (notifyUserId) {
       await Notification.create({
         userId: notifyUserId,
@@ -97,8 +119,32 @@ export const getDisputes = catchAsync(
 
     // Filter by role - users and contractors see only their disputes, admins see all
     if (req.user.role !== 'super_admin') {
+      const contractorProfile = req.user.role === 'contractor' ? await getContractorProfileForUser(req.user.userId) : null;
+      const participantFilter =
+        req.user.role === 'contractor'
+          ? contractorProfile?._id
+            ? [{ contractorId: contractorProfile._id }]
+            : []
+          : [{ userId: req.user.userId }];
+
+      if (participantFilter.length === 0) {
+        res.status(200).json({
+          success: true,
+          data: {
+            disputes: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0,
+            },
+          },
+        });
+        return;
+      }
+
       const projects = await Project.find({
-        $or: [{ userId: req.user.userId }, { contractorId: req.user.userId }],
+        $or: participantFilter,
       }).select('_id');
 
       query.projectId = { $in: projects.map((p) => p._id) };
@@ -166,8 +212,9 @@ export const getDispute = catchAsync(
 
     // Check permission
     const project = dispute.projectId as any;
+    const contractorProfile = req.user.role === 'contractor' ? await getContractorProfileForUser(req.user.userId) : null;
     const isOwner = project.userId.toString() === req.user.userId;
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const isContractor = project.contractorId?.toString() === contractorProfile?._id?.toString();
     const isAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isContractor && !isAdmin) {
@@ -259,8 +306,9 @@ export const addEvidence = catchAsync(
 
     // Check permission
     const project = dispute.projectId as any;
+    const contractorProfile = req.user.role === 'contractor' ? await getContractorProfileForUser(req.user.userId) : null;
     const isOwner = project.userId.toString() === req.user.userId;
-    const isContractor = project.contractorId?.toString() === req.user.userId;
+    const isContractor = project.contractorId?.toString() === contractorProfile?._id?.toString();
     const isAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isContractor && !isAdmin) {
@@ -335,7 +383,8 @@ export const resolveDispute = catchAsync(
 
     // Notify both parties
     const project = dispute.projectId as any;
-    const userIds = [project.userId, project.contractorId].filter(Boolean);
+    const participantIds = await getProjectParticipantIds(project);
+    const userIds = [participantIds.projectOwnerUserId, participantIds.contractorUserId].filter(Boolean);
 
     for (const userId of userIds) {
       await Notification.create({

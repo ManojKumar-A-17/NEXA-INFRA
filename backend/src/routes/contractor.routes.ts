@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getContractors,
   getContractor,
+  getMyContractorProfile,
   updateContractor,
   addPortfolioItem,
   addCertification,
@@ -26,6 +27,13 @@ router.get('/', getContractors);
  * @access  Private
  */
 router.get('/favorites', authenticate, getFavoriteContractors);
+
+/**
+ * @route   GET /api/contractors/me
+ * @desc    Get current contractor profile
+ * @access  Private (Contractor)
+ */
+router.get('/me', authenticate, getMyContractorProfile);
 
 /**
  * @route   GET /api/contractors/:id

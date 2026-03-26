@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import Payment from '../models/Payment';
 import Project from '../models/Project';
+import Contractor from '../models/Contractor';
 import { AppError, catchAsync } from '../middleware/error.middleware';
 import mongoose from 'mongoose';
+
+const getContractorProfileIdForUser = async (userId: string) => {
+  const contractor = await Contractor.findOne({ userId }).select('_id');
+  return contractor?._id || null;
+};
 
 /**
  * Create payment intent
@@ -30,6 +36,10 @@ export const createPaymentIntent = catchAsync(
       return next(new AppError('Project not found', 404));
     }
 
+    if (!project.contractorId) {
+      return next(new AppError('A contractor must be assigned before creating payments', 400));
+    }
+
     // Check permission
     if (project.userId.toString() !== req.user.userId && req.user.role !== 'super_admin') {
       return next(new AppError('Only project owner can create payments', 403));
@@ -44,12 +54,13 @@ export const createPaymentIntent = catchAsync(
       status: 'pending',
       paymentMethod: 'stripe',
       description: description || `Payment for ${project.title}`,
-      milestoneId,
-      invoice: {
-        invoiceNumber: `INV-${Date.now()}`,
-        issueDate: new Date(),
-        dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+      metadata: {
+        milestone: milestoneId,
+        notes: description,
       },
+      transactionFee: 0,
+      netAmount: amount,
+      invoiceNumber: `INV-${Date.now()}`,
     });
 
     // In a real implementation, you would create a Stripe PaymentIntent here
@@ -136,7 +147,25 @@ export const getPayments = catchAsync(
     if (req.user.role === 'user') {
       query.userId = req.user.userId;
     } else if (req.user.role === 'contractor') {
-      query.contractorId = req.user.userId;
+      const contractorProfileId = await getContractorProfileIdForUser(req.user.userId);
+
+      if (!contractorProfileId) {
+        res.status(200).json({
+          success: true,
+          data: {
+            payments: [],
+            pagination: {
+              page,
+              limit,
+              total: 0,
+              pages: 0,
+            },
+          },
+        });
+        return;
+      }
+
+      query.contractorId = contractorProfileId;
     }
     // Admin can see all
 
@@ -202,8 +231,10 @@ export const getPayment = catchAsync(
     }
 
     // Check permission
+    const contractorProfileId =
+      req.user.role === 'contractor' ? await getContractorProfileIdForUser(req.user.userId) : null;
     const isOwner = payment.userId._id.toString() === req.user.userId;
-    const isContractor = payment.contractorId?._id.toString() === req.user.userId;
+    const isContractor = payment.contractorId?._id.toString() === contractorProfileId?.toString();
     const isAdmin = req.user.role === 'super_admin';
 
     if (!isOwner && !isContractor && !isAdmin) {
@@ -360,7 +391,28 @@ export const getPaymentAnalytics = catchAsync(
     if (req.user.role === 'user') {
       query.userId = req.user.userId;
     } else if (req.user.role === 'contractor') {
-      query.contractorId = req.user.userId;
+      const contractorProfileId = await getContractorProfileIdForUser(req.user.userId);
+
+      if (!contractorProfileId) {
+        res.status(200).json({
+          success: true,
+          data: {
+            analytics: {
+              totalPayments: 0,
+              totalAmount: 0,
+              completedPayments: 0,
+              completedAmount: 0,
+              pendingPayments: 0,
+              pendingAmount: 0,
+              refundedPayments: 0,
+              refundedAmount: 0,
+            },
+          },
+        });
+        return;
+      }
+
+      query.contractorId = contractorProfileId;
     }
 
     const payments = await Payment.find(query);

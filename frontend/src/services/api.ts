@@ -29,6 +29,7 @@ export interface ApiResponse<T = unknown> {
 // Constants
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 const TOKEN_STORAGE_KEY = 'nexa_auth_tokens';
+const LEGACY_TOKEN_STORAGE_KEY = 'nexa_auth_token';
 const USER_STORAGE_KEY = 'nexa_user';
 
 // Token Management
@@ -39,7 +40,19 @@ class TokenManager {
     if (!this.tokens) {
       try {
         const stored = localStorage.getItem(TOKEN_STORAGE_KEY);
-        this.tokens = stored ? JSON.parse(stored) : null;
+        if (stored) {
+          this.tokens = JSON.parse(stored);
+        } else {
+          const legacyToken = localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY);
+          this.tokens = legacyToken
+            ? {
+                access_token: legacyToken,
+                refresh_token: '',
+                token_type: 'bearer',
+                expires_in: 0,
+              }
+            : null;
+        }
       } catch {
         this.tokens = null;
       }
@@ -51,23 +64,32 @@ class TokenManager {
     this.tokens = tokens;
     if (tokens) {
       localStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+      localStorage.setItem(LEGACY_TOKEN_STORAGE_KEY, tokens.access_token);
     } else {
       localStorage.removeItem(TOKEN_STORAGE_KEY);
+      localStorage.removeItem(LEGACY_TOKEN_STORAGE_KEY);
       localStorage.removeItem(USER_STORAGE_KEY);
     }
   }
 
   static getAccessToken(): string | null {
     const tokens = this.getTokens();
-    return tokens?.access_token || null;
+    return tokens?.access_token || localStorage.getItem(LEGACY_TOKEN_STORAGE_KEY);
   }
 
   static isTokenExpired(): boolean {
-    const tokens = this.getTokens();
-    if (!tokens) return true;
+    const accessToken = this.getAccessToken();
+    if (!accessToken) return true;
 
-    const expiryTime = JSON.parse(atob(tokens.access_token.split('.')[1])).exp * 1000;
-    return Date.now() >= expiryTime - 60000; // 1 minute buffer
+    try {
+      const payload = JSON.parse(atob(accessToken.split('.')[1]));
+      if (!payload?.exp) return false;
+
+      const expiryTime = payload.exp * 1000;
+      return Date.now() >= expiryTime - 60000; // 1 minute buffer
+    } catch {
+      return false;
+    }
   }
 }
 
@@ -97,7 +119,7 @@ class ApiClient {
     this.client.interceptors.request.use(
       (config: InternalAxiosRequestConfig) => {
         const token = TokenManager.getAccessToken();
-        if (token && !config.url?.includes('/auth/')) {
+        if (token && !config.headers.Authorization) {
           config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
